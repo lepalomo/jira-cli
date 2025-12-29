@@ -10,26 +10,26 @@ A command-line interface tool to interact with Jira API v3.
 
 ## Installation
 
-### Option 1: Quick Install (Recommended for Beginners)
+### Quick Install (Recommended)
 
-1. **Clone or download the project**:
-   - If using Git: `git clone https://github.com/YOUR-USERNAME/jira-cli.git`
-   - Or download the ZIP from GitHub and extract it.
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/lepalomo/jira-cli.git
+   cd jira-cli
+   ```
 
-2. **Navigate to the project folder**:
-   - Open a terminal (Command Prompt, PowerShell, or Bash) and go to the project directory, e.g., `cd jira-cli`.
+2. **Install dependencies and setup**:
+   ```bash
+   npm install
+   npm link
+   ```
 
-3. **Run the installer**:
-   - On Linux/Mac/WSL: `./install.sh`
-   - On Windows (PowerShell): `.\install.ps1`
-   - This will install dependencies and set up the `jira-cli` command globally.
+3. **You're ready!** The `jira-cli` command is now available globally.
 
-### Option 2: Manual Install
+### Alternative: Using Install Scripts
 
-1. Clone or download the project as above.
-2. Navigate to the project folder.
-3. Run `npm install` to install dependencies.
-4. Run `npm link` to create a global symlink for the `jira-cli` command.
+- **Linux/Mac/WSL**: `./install.sh`
+- **Windows PowerShell**: `.\install.ps1`
 
 ## Usage
 
@@ -59,12 +59,14 @@ jira-cli list-projects -u https://another-instance.atlassian.net -e another-emai
 
 - `set-config`: Save Jira URL, email, and API token to a local config file.
 - `list-projects`: Fetch and display active projects from Jira.
+- `list-workflows`: List workflows (--active or --inactive).
+- `cleanup`: Clean up unused resources (--workflows).
 
 ## Supported Platforms
 
-- **Windows**: Use PowerShell or Command Prompt. Run `.\install.ps1` for installation.
-- **Linux/Mac**: Use Bash or Zsh. Run `./install.sh` for installation.
-- **WSL (Windows Subsystem for Linux)**: Same as Linux.
+- **Windows**: PowerShell, Command Prompt, or WSL
+- **Linux**: Any terminal with Bash/Zsh
+- **macOS**: Terminal with Bash/Zsh
 
 ## Requirements
 
