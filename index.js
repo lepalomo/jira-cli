@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 const { Command } = require('commander');
-const { loadConfig, saveConfig } = require('./srccommands/config');
-const { listProjects, listCategories, archiveProject, archiveProjects, updateProjectName, updateProjectCategory, updateProjectsCategory, listProjectsByCategory, deleteProjects, listWorkflows, deleteWorkflows, listWorkflowSchemes, cleanupWorkflows } = require('./srccommands/projects-new');
+const { loadConfig, saveConfig } = require('./src/commands/config');
+const { listProjects, listCategories, archiveProject, archiveProjects, updateProjectName, updateProjectCategory, updateProjectsCategory, listProjectsByCategory, deleteProjects, listWorkflows, deleteWorkflows, deleteWorkflowSchemes, listWorkflowSchemes, cleanupWorkflows, cleanupWorkflowSchemes, listIssueTypeScreenSchemes, deleteIssueTypeScreenSchemes, listIssueTypeSchemes, deleteIssueTypeSchemes, listIssueTypes, deleteIssueTypes, listScreenSchemes, deleteScreenSchemes, listScreens, deleteScreens } = require('./src/commands/commands');
 
 const program = new Command();
 
@@ -21,6 +21,57 @@ program.command('set-config')
     .option('--smtp-pass <pass>', 'Senha de app do email SMTP')
     .action((options) => {
         saveConfig(options);
+    });
+
+program.command('set-email-logs')
+    .description('Configurar email para logs (opcional)')
+    .requiredOption('-l, --log-email <email>', 'Email para receber logs das operações')
+    .requiredOption('--smtp-user <user>', 'Email SMTP para envio (ex: seu-email@gmail.com)')
+    .requiredOption('--smtp-pass <pass>', 'Senha de app do email SMTP')
+    .action((options) => {
+        const config = loadConfig();
+        config.logEmail = options.logEmail;
+        config.smtpUser = options.smtpUser;
+        config.smtpPass = options.smtpPass;
+        saveConfig(config);
+        console.log('Configuração de email salva com sucesso.');
+    });
+
+program.command('list-project-categories')
+    .description('List available project categories')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        try {
+            await listCategories(config);
+        } catch (error) {
+            console.error('Error fetching categories:', error.response ? error.response.data : error.message);
+        }
+    });
+
+program.command('list-projects-by-category')
+    .description('List projects by category')
+    .requiredOption('-c, --category <categoryId>', 'Category ID')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        try {
+            await listProjectsByCategory(config, options.category);
+        } catch (error) {
+            console.error('Error fetching projects by category:', error.response ? error.response.data : error.message);
+        }
     });
 
 program.command('list-projects')
@@ -57,6 +108,26 @@ program.command('archive-project')
             await archiveProject(config, options.key);
         } catch (error) {
             console.error('Error archiving project:', error.response ? error.response.data : error.message);
+        }
+    });
+
+program.command('archive-projects')
+    .description('Archive multiple projects')
+    .requiredOption('-k, --keys <keys>', 'Project keys separated by comma (e.g., PROJ1,PROJ2,PROJ3)')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        const projectKeys = options.keys.split(',').map(key => key.trim());
+        try {
+            await archiveProjects(config, projectKeys);
+        } catch (error) {
+            console.error('Error archiving projects:', error.response ? error.response.data : error.message);
         }
     });
 
@@ -100,44 +171,6 @@ program.command('update-project-category')
         }
     });
 
-program.command('list-project-categories')
-    .description('List available project categories')
-    .option('-u, --url <url>', 'Jira instance URL')
-    .option('-e, --email <email>', 'Jira user email')
-    .option('-t, --token <token>', 'Jira API token')
-    .action(async (options) => {
-        const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
-        try {
-            await listCategories(config);
-        } catch (error) {
-            console.error('Error fetching categories:', error.response ? error.response.data : error.message);
-        }
-    });
-
-program.command('archive-projects')
-    .description('Archive multiple projects')
-    .requiredOption('-k, --keys <keys>', 'Project keys separated by comma (e.g., PROJ1,PROJ2,PROJ3)')
-    .option('-u, --url <url>', 'Jira instance URL')
-    .option('-e, --email <email>', 'Jira user email')
-    .option('-t, --token <token>', 'Jira API token')
-    .action(async (options) => {
-        const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
-        const projectKeys = options.keys.split(',').map(key => key.trim());
-        try {
-            await archiveProjects(config, projectKeys);
-        } catch (error) {
-            console.error('Error archiving projects:', error.response ? error.response.data : error.message);
-        }
-    });
-
 program.command('update-projects-category')
     .description('Update category for multiple projects')
     .requiredOption('-k, --keys <keys>', 'Project keys separated by comma (e.g., PROJ1,PROJ2,PROJ3)')
@@ -159,25 +192,6 @@ program.command('update-projects-category')
         }
     });
 
-program.command('list-projects-by-category')
-    .description('List projects by category')
-    .requiredOption('-c, --category <categoryId>', 'Category ID')
-    .option('-u, --url <url>', 'Jira instance URL')
-    .option('-e, --email <email>', 'Jira user email')
-    .option('-t, --token <token>', 'Jira API token')
-    .action(async (options) => {
-        const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
-        try {
-            await listProjectsByCategory(config, options.category);
-        } catch (error) {
-            console.error('Error fetching projects by category:', error.response ? error.response.data : error.message);
-        }
-    });
-
 program.command('delete-projects')
     .description('Delete multiple projects')
     .requiredOption('-k, --keys <keys>', 'Project keys separated by comma (e.g., PROJ1,PROJ2,PROJ3)')
@@ -195,6 +209,44 @@ program.command('delete-projects')
             await deleteProjects(config, projectKeys);
         } catch (error) {
             console.error('Error deleting projects:', error.response ? error.response.data : error.message);
+        }
+    });
+
+program.command('list-workflow-schemes')
+    .description('List workflow schemes')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        try {
+            await listWorkflowSchemes(config);
+        } catch (error) {
+            console.error('Error fetching workflow schemes:', error.response ? error.response.data : error.message);
+        }
+    });
+
+program.command('delete-workflow-schemes')
+    .description('Delete multiple workflow schemes')
+    .requiredOption('-i, --ids <ids>', 'Workflow scheme IDs separated by comma (e.g., ID1,ID2,ID3)')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        const schemeIds = options.ids.split(',').map(id => id.trim());
+        try {
+            await deleteWorkflowSchemes(config, schemeIds);
+        } catch (error) {
+            console.error('Error deleting workflow schemes:', error.response ? error.response.data : error.message);
         }
     });
 
@@ -247,10 +299,8 @@ program.command('delete-workflows')
         }
     });
 
-program.command('list-workflow-schemes')
-    .description('List workflow schemes')
-    .option('--active', 'List only active workflow schemes')
-    .option('--inactive', 'List only inactive workflow schemes')
+program.command('list-issue-type-screen-schemes')
+    .description('List issue type screen schemes')
     .option('-u, --url <url>', 'Jira instance URL')
     .option('-e, --email <email>', 'Jira user email')
     .option('-t, --token <token>', 'Jira API token')
@@ -260,19 +310,190 @@ program.command('list-workflow-schemes')
             console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
             return;
         }
-        let isActive = null;
-        if (options.active) isActive = true;
-        if (options.inactive) isActive = false;
         try {
-            await listWorkflowSchemes(config, isActive);
+            await listIssueTypeScreenSchemes(config);
         } catch (error) {
-            console.error('Error fetching workflow schemes:', error.response ? error.response.data : error.message);
+            console.error('Error fetching issue type screen schemes:', error.response ? error.response.data : error.message);
+        }
+    });
+
+program.command('delete-issue-type-screen-schemes')
+    .description('Delete multiple issue type screen schemes')
+    .requiredOption('-i, --ids <ids>', 'Issue type screen scheme IDs separated by comma (e.g., ID1,ID2,ID3)')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        const schemeIds = options.ids.split(',').map(id => id.trim());
+        try {
+            await deleteIssueTypeScreenSchemes(config, schemeIds);
+        } catch (error) {
+            console.error('Error deleting issue type screen schemes:', error.response ? error.response.data : error.message);
+        }
+    });
+
+program.command('list-issue-type-schemes')
+    .description('List issue type schemes')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        try {
+            await listIssueTypeSchemes(config);
+        } catch (error) {
+            console.error('Error fetching issue type schemes:', error.response ? error.response.data : error.message);
+        }
+    });
+
+program.command('delete-issue-type-schemes')
+    .description('Delete multiple issue type schemes')
+    .requiredOption('-i, --ids <ids>', 'Issue type scheme IDs separated by comma (e.g., ID1,ID2,ID3)')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        const schemeIds = options.ids.split(',').map(id => id.trim());
+        try {
+            await deleteIssueTypeSchemes(config, schemeIds);
+        } catch (error) {
+            console.error('Error deleting issue type schemes:', error.response ? error.response.data : error.message);
+        }
+    });
+
+program.command('list-issue-types')
+    .description('List issue types')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        try {
+            await listIssueTypes(config);
+        } catch (error) {
+            console.error('Error fetching issue types:', error.response ? error.response.data : error.message);
+        }
+    });
+
+program.command('delete-issue-types')
+    .description('Delete multiple issue types')
+    .requiredOption('-i, --ids <ids>', 'Issue type IDs separated by comma (e.g., ID1,ID2,ID3)')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        const issueTypeIds = options.ids.split(',').map(id => id.trim());
+        try {
+            await deleteIssueTypes(config, issueTypeIds);
+        } catch (error) {
+            console.error('Error deleting issue types:', error.response ? error.response.data : error.message);
+        }
+    });
+
+program.command('list-screen-schemes')
+    .description('List screen schemes')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        try {
+            await listScreenSchemes(config);
+        } catch (error) {
+            console.error('Error fetching screen schemes:', error.response ? error.response.data : error.message);
+        }
+    });
+
+program.command('delete-screen-schemes')
+    .description('Delete multiple screen schemes')
+    .requiredOption('-i, --ids <ids>', 'Screen scheme IDs separated by comma (e.g., ID1,ID2,ID3)')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        const schemeIds = options.ids.split(',').map(id => id.trim());
+        try {
+            await deleteScreenSchemes(config, schemeIds);
+        } catch (error) {
+            console.error('Error deleting screen schemes:', error.response ? error.response.data : error.message);
+        }
+    });
+
+program.command('list-screens')
+    .description('List screens')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        try {
+            await listScreens(config);
+        } catch (error) {
+            console.error('Error fetching screens:', error.response ? error.response.data : error.message);
+        }
+    });
+
+program.command('delete-screens')
+    .description('Delete multiple screens')
+    .requiredOption('-i, --ids <ids>', 'Screen IDs separated by comma (e.g., ID1,ID2,ID3)')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        const screenIds = options.ids.split(',').map(id => id.trim());
+        try {
+            await deleteScreens(config, screenIds);
+        } catch (error) {
+            console.error('Error deleting screens:', error.response ? error.response.data : error.message);
         }
     });
 
 program.command('cleanup')
     .description('Limpeza de recursos do Jira')
     .option('--workflows', 'Limpar workflows inativos sem esquemas')
+    .option('--workflow-schemes', 'Limpar workflow schemes inativos')
+    .option('--wf-schemes', 'Alias para --workflow-schemes')
     .option('--exec', 'Executar a limpeza (sem esta opção apenas lista os itens)')
     .option('-u, --url <url>', 'Jira instance URL')
     .option('-e, --email <email>', 'Jira user email')
@@ -283,31 +504,22 @@ program.command('cleanup')
             console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
             return;
         }
-        if (!options.workflows) {
-            console.error('Especifique o tipo de limpeza: --workflows');
+        const hasWorkflows = options.workflows;
+        const hasSchemes = options['workflow-schemes'] || options['wf-schemes'];
+        if (!hasWorkflows && !hasSchemes) {
+            console.error('Especifique o tipo de limpeza: --workflows ou --workflow-schemes (--wf-schemes)');
             return;
         }
         try {
-            if (options.workflows) {
+            if (hasWorkflows) {
                 await cleanupWorkflows(config, options.exec);
+            }
+            if (hasSchemes) {
+                await cleanupWorkflowSchemes(config, options.exec);
             }
         } catch (error) {
             console.error('Error during cleanup:', error.response ? error.response.data : error.message);
         }
-    });
-
-program.command('set-email-logs')
-    .description('Configurar email para logs (opcional)')
-    .requiredOption('-l, --log-email <email>', 'Email para receber logs das operações')
-    .requiredOption('--smtp-user <user>', 'Email SMTP para envio (ex: seu-email@gmail.com)')
-    .requiredOption('--smtp-pass <pass>', 'Senha de app do email SMTP')
-    .action((options) => {
-        const config = loadConfig();
-        config.logEmail = options.logEmail;
-        config.smtpUser = options.smtpUser;
-        config.smtpPass = options.smtpPass;
-        saveConfig(config);
-        console.log('Configuração de email salva com sucesso.');
     });
 
 program.parse();
