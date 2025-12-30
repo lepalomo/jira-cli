@@ -5,15 +5,10 @@
     "main": "index.js",
     "scripts": {
         "start": "node index.js",
-        "clean:config": "node clean-config.js",
-        "prebuild": "npm run clean:config",
         "build:win": "pkg . --targets node18-win-x64 --output dist/jira-cli.exe --no-bytecode --public",
         "build:linux": "pkg . --targets node18-linux-x64 --output dist/jira-cli --no-bytecode --public",
         "build:mac": "pkg . --targets node18-macos-x64 --output dist/jira-cli --no-bytecode --public",
-        "build:all": "pkg . --targets node18-win-x64,node18-linux-x64,node18-macos-x64 --output dist/jira-cli- --no-bytecode --public",
-        "package": "npm run build:win && cd dist && zip -r jira-cli-windows.zip jira-cli.exe",
-        "test:build": "npm run build:win && echo 'Build complete. Test with: ./dist/jira-cli.exe --help'",
-        "clean-build": "rm -rf dist && npm run build:win"
+        "build:all": "pkg . --targets node18-win-x64,node18-linux-x64,node18-macos-x64 --output dist/jira-cli- --no-bytecode --public"
     },
     "dependencies": {
         "axios": "^1.6.0",
@@ -38,11 +33,6 @@
             "node_modules/cli-table3/**/*",
             "node_modules/commander/**/*",
             "node_modules/nodemailer/**/*"
-        ],
-        "ignore": [
-            "config.json",
-            "*.config.json",
-            "**/*.config.json"
         ]
     }
 }

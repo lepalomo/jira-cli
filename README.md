@@ -2,15 +2,24 @@
 
 A command-line interface tool to interact with Jira API v3.
 
-## Prerequisites
-
-- **Node.js** (version 14 or higher): Download from [nodejs.org](https://nodejs.org/).
-- **npm** (comes with Node.js).
-- A Jira account with API access (generate an API token from your Jira account settings).
-
 ## Installation
 
-### Quick Install (Recommended)
+### Option 1: Download Pre-built Executable (Recommended)
+
+Download the standalone executable for your platform:
+
+- **Windows**: `jira-cli.exe` (Windows executable)
+- **Linux**: `jira-cli` (Linux binary)
+- **macOS**: `jira-cli` (macOS binary)
+
+**Usage:**
+1. Download the executable for your platform
+2. Make it executable (Linux/macOS): `chmod +x jira-cli`
+3. Run: `./jira-cli --help`
+
+### Option 2: Run from Source (Development)
+
+For development or contribution:
 
 1. **Clone the repository**:
    ```bash
@@ -18,83 +27,37 @@ A command-line interface tool to interact with Jira API v3.
    cd jira-cli
    ```
 
-2. **Install dependencies and setup**:
+2. **Install dependencies**:
    ```bash
    npm install
-   npm link
    ```
 
-3. **You're ready!** The `jira-cli` command is now available globally.
-
-### Alternative: Using Install Scripts
-
-- **Linux/Mac/WSL**: `./install.sh`
-- **Windows PowerShell**: `.\install.ps1`
-- **Windows (if PowerShell blocked)**: `install.bat`
-
-### Troubleshooting Installation Issues
-
-#### PowerShell Execution Policy Error
-If you see an error like:
-```
-.\install.ps1 : O arquivo ... não pode ser carregado porque a execução de scripts foi desabilitada neste sistema.
-```
-
-**Solutions:**
-1. **Use the batch file**: Run `install.bat` instead
-2. **Run with bypass policy**: `powershell -ExecutionPolicy Bypass -File install.ps1`
-3. **Run as Administrator**: Open PowerShell as Admin and run `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`
-
-#### npm Command Not Found
-Make sure Node.js is installed from [nodejs.org](https://nodejs.org/). After installation, restart your terminal.
-
-#### Permission Errors on Linux/macOS
-You may need to use `sudo`:
-```bash
-sudo npm link
-```
-
-### Uninstallation / Cleanup
-
-If you need to remove the CLI or fix a broken installation:
-
-1. **Remove global symlink**:
+3. **Run directly**:
    ```bash
-   npm unlink -g jira-cli
-   ```
-   or
-   ```bash
-   npm remove -g jira-cli
+   npm start -- --help
    ```
 
-2. **Clean local dependencies** (optional):
+## Prerequisites
+
+- **For pre-built executables**: No prerequisites, runs standalone
+- **For source builds**: Node.js v14+ and npm
+- **Jira account** with API access (generate API token from Jira settings)
+
+## Quick Start
+
+1. **Set your Jira credentials**:
    ```bash
-   rm -rf node_modules
-   rm package-lock.json
+   jira-cli set-config -u https://yourcompany.atlassian.net -e your-email@example.com -t your-api-token
    ```
 
-3. **Reinstall fresh**:
+2. **List your projects**:
    ```bash
-   npm install
-   npm link
+   jira-cli list-projects
    ```
 
-4. **For complete removal** (if you want to start over):
+3. **Get help**:
    ```bash
-   # Remove the global symlink
-   npm unlink -g jira-cli
-   
-   # Delete the repository folder
-   cd ..
-   rm -rf jira-cli
-   
-   # Clone fresh
-   git clone https://github.com/lepalomo/jira-cli.git
-   cd jira-cli
-   
-   # Install fresh
-   npm install
-   npm link
+   jira-cli --help
    ```
 
 ## Usage
@@ -579,7 +542,51 @@ Logs include:
 - **Linux**: Any terminal with Bash/Zsh
 - **macOS**: Terminal with Bash/Zsh
 
+## Building Executables
+
+### Creating Standalone EXE/MSI Files
+
+The Jira CLI can be packaged as standalone executables for distribution.
+
+#### Prerequisites
+```bash
+# Install pkg (packaging tool)
+npm install --save-dev pkg
+```
+
+#### Build Commands
+```bash
+# Build Windows executable
+npm run build:win
+
+# Build Linux executable
+npm run build:linux
+
+# Build macOS executable
+npm run build:mac
+
+# Build all platforms
+npm run build:all
+
+# Clean build (removes config and builds fresh)
+npm run build:clean
+```
+
+#### Configuration Safety
+- Configuration is stored in `~/.jira-cli/config.json` (user home directory)
+- No credentials are embedded in executables
+- Users must run `set-config` command to configure their own credentials
+
+#### Creating MSI Installers
+1. Use **Inno Setup** (Windows) with provided template
+2. Or use **WiX Toolset** with `create-msi.js` script
+3. See `BUILD.md` for detailed instructions
+
 ## Requirements
 
 - Node.js (version 14 or higher)
 - Jira API token (generate from your Jira account settings)
+
+## Building from Source
+
+For detailed build instructions, see [BUILD.md](BUILD.md).
