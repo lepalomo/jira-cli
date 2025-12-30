@@ -4,22 +4,20 @@ A command-line interface tool to interact with Jira API v3.
 
 ## Installation
 
-### Option 1: Download Pre-built Executable (Recommended)
+### Option 1: Download Windows Executable
 
-Download the standalone executable for your platform:
-
-- **Windows**: `jira-cli.exe` (Windows executable)
-- **Linux**: `jira-cli` (Linux binary)
-- **macOS**: `jira-cli` (macOS binary)
+Download the standalone Windows executable `jira-cli.exe`.
 
 **Usage:**
-1. Download the executable for your platform
-2. Make it executable (Linux/macOS): `chmod +x jira-cli`
-3. Run: `./jira-cli --help`
+1. Download `jira-cli.exe`
+2. Run from command prompt or PowerShell:
+   ```cmd
+   jira-cli.exe --help
+   ```
 
-### Option 2: Run from Source (Development)
+### Option 2: Run from Source
 
-For development or contribution:
+For development or Linux/macOS usage:
 
 1. **Clone the repository**:
    ```bash
@@ -39,8 +37,8 @@ For development or contribution:
 
 ## Prerequisites
 
-- **For pre-built executables**: No prerequisites, runs standalone
-- **For source builds**: Node.js v14+ and npm
+- **Windows executable**: No prerequisites, runs standalone
+- **Source builds**: Node.js v14+ and npm
 - **Jira account** with API access (generate API token from Jira settings)
 
 ## Quick Start
