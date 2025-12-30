@@ -231,8 +231,10 @@ program.command('list-workflow-schemes')
     });
 
 program.command('delete-workflow-schemes')
-    .description('Delete multiple workflow schemes')
-    .requiredOption('-i, --ids <ids>', 'Workflow scheme IDs separated by comma (e.g., ID1,ID2,ID3)')
+    .description('Delete multiple workflow schemes. Use --unused to delete schemes not linked to any projects')
+    .option('-i, --ids <ids>', 'Workflow scheme IDs separated by comma (e.g., ID1,ID2,ID3)')
+    .option('--unused', 'Delete all workflow schemes not linked to any projects')
+    .option('--exec', 'Execute deletion (without this option, only preview what would be deleted)')
     .option('-u, --url <url>', 'Jira instance URL')
     .option('-e, --email <email>', 'Jira user email')
     .option('-t, --token <token>', 'Jira API token')
@@ -242,9 +244,24 @@ program.command('delete-workflow-schemes')
             console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
             return;
         }
-        const schemeIds = options.ids.split(',').map(id => id.trim());
+        
+        if (options.unused && options.ids) {
+            console.error('Cannot specify both --ids and --unused. Choose one.');
+            return;
+        }
+        
+        if (!options.unused && !options.ids) {
+            console.error('Must specify either --ids or --unused.');
+            return;
+        }
+        
         try {
-            await deleteWorkflowSchemes(config, schemeIds);
+            if (options.unused) {
+                await deleteWorkflowSchemes(config, [], { unused: true, exec: options.exec });
+            } else {
+                const schemeIds = options.ids.split(',').map(id => id.trim());
+                await deleteWorkflowSchemes(config, schemeIds, { unused: false, exec: false });
+            }
         } catch (error) {
             console.error('Error deleting workflow schemes:', error.response ? error.response.data : error.message);
         }
@@ -280,8 +297,10 @@ program.command('list-workflows')
     });
 
 program.command('delete-workflows')
-    .description('Delete multiple workflows')
-    .requiredOption('-i, --ids <ids>', 'Workflow IDs separated by comma (e.g., ID1,ID2,ID3)')
+    .description('Delete multiple workflows. Use --unused to delete inactive workflows not linked to any schemes')
+    .option('-i, --ids <ids>', 'Workflow IDs separated by comma (e.g., ID1,ID2,ID3)')
+    .option('--unused', 'Delete all inactive workflows not linked to any schemes')
+    .option('--exec', 'Execute deletion (without this option, only preview what would be deleted)')
     .option('-u, --url <url>', 'Jira instance URL')
     .option('-e, --email <email>', 'Jira user email')
     .option('-t, --token <token>', 'Jira API token')
@@ -291,9 +310,24 @@ program.command('delete-workflows')
             console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
             return;
         }
-        const workflowIds = options.ids.split(',').map(id => id.trim());
+        
+        if (options.unused && options.ids) {
+            console.error('Cannot specify both --ids and --unused. Choose one.');
+            return;
+        }
+        
+        if (!options.unused && !options.ids) {
+            console.error('Must specify either --ids or --unused.');
+            return;
+        }
+        
         try {
-            await deleteWorkflows(config, workflowIds);
+            if (options.unused) {
+                await deleteWorkflows(config, [], { unused: true, exec: options.exec });
+            } else {
+                const workflowIds = options.ids.split(',').map(id => id.trim());
+                await deleteWorkflows(config, workflowIds, { unused: false, exec: false });
+            }
         } catch (error) {
             console.error('Error deleting workflows:', error.response ? error.response.data : error.message);
         }
@@ -318,8 +352,10 @@ program.command('list-issue-type-screen-schemes')
     });
 
 program.command('delete-issue-type-screen-schemes')
-    .description('Delete multiple issue type screen schemes')
-    .requiredOption('-i, --ids <ids>', 'Issue type screen scheme IDs separated by comma (e.g., ID1,ID2,ID3)')
+    .description('Delete multiple issue type screen schemes. Use --unused to delete schemes not linked to any projects')
+    .option('-i, --ids <ids>', 'Issue type screen scheme IDs separated by comma (e.g., ID1,ID2,ID3)')
+    .option('--unused', 'Delete all issue type screen schemes not linked to any projects')
+    .option('--exec', 'Execute deletion (without this option, only preview what would be deleted)')
     .option('-u, --url <url>', 'Jira instance URL')
     .option('-e, --email <email>', 'Jira user email')
     .option('-t, --token <token>', 'Jira API token')
@@ -329,9 +365,24 @@ program.command('delete-issue-type-screen-schemes')
             console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
             return;
         }
-        const schemeIds = options.ids.split(',').map(id => id.trim());
+        
+        if (options.unused && options.ids) {
+            console.error('Cannot specify both --ids and --unused. Choose one.');
+            return;
+        }
+        
+        if (!options.unused && !options.ids) {
+            console.error('Must specify either --ids or --unused.');
+            return;
+        }
+        
         try {
-            await deleteIssueTypeScreenSchemes(config, schemeIds);
+            if (options.unused) {
+                await deleteIssueTypeScreenSchemes(config, [], { unused: true, exec: options.exec });
+            } else {
+                const schemeIds = options.ids.split(',').map(id => id.trim());
+                await deleteIssueTypeScreenSchemes(config, schemeIds, { unused: false, exec: false });
+            }
         } catch (error) {
             console.error('Error deleting issue type screen schemes:', error.response ? error.response.data : error.message);
         }
@@ -356,8 +407,10 @@ program.command('list-issue-type-schemes')
     });
 
 program.command('delete-issue-type-schemes')
-    .description('Delete multiple issue type schemes')
-    .requiredOption('-i, --ids <ids>', 'Issue type scheme IDs separated by comma (e.g., ID1,ID2,ID3)')
+    .description('Delete multiple issue type schemes. Use --unused to delete schemes not linked to any projects AND any issue types')
+    .option('-i, --ids <ids>', 'Issue type scheme IDs separated by comma (e.g., ID1,ID2,ID3)')
+    .option('--unused', 'Delete all issue type schemes not linked to any projects AND any issue types')
+    .option('--exec', 'Execute deletion (without this option, only preview what would be deleted)')
     .option('-u, --url <url>', 'Jira instance URL')
     .option('-e, --email <email>', 'Jira user email')
     .option('-t, --token <token>', 'Jira API token')
@@ -367,9 +420,24 @@ program.command('delete-issue-type-schemes')
             console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
             return;
         }
-        const schemeIds = options.ids.split(',').map(id => id.trim());
+        
+        if (options.unused && options.ids) {
+            console.error('Cannot specify both --ids and --unused. Choose one.');
+            return;
+        }
+        
+        if (!options.unused && !options.ids) {
+            console.error('Must specify either --ids or --unused.');
+            return;
+        }
+        
         try {
-            await deleteIssueTypeSchemes(config, schemeIds);
+            if (options.unused) {
+                await deleteIssueTypeSchemes(config, [], { unused: true, exec: options.exec });
+            } else {
+                const schemeIds = options.ids.split(',').map(id => id.trim());
+                await deleteIssueTypeSchemes(config, schemeIds, { unused: false, exec: false });
+            }
         } catch (error) {
             console.error('Error deleting issue type schemes:', error.response ? error.response.data : error.message);
         }
@@ -432,8 +500,10 @@ program.command('list-screen-schemes')
     });
 
 program.command('delete-screen-schemes')
-    .description('Delete multiple screen schemes')
-    .requiredOption('-i, --ids <ids>', 'Screen scheme IDs separated by comma (e.g., ID1,ID2,ID3)')
+    .description('Delete multiple screen schemes. Use --unused to delete schemes not linked to any issue type screen schemes')
+    .option('-i, --ids <ids>', 'Screen scheme IDs separated by comma (e.g., ID1,ID2,ID3)')
+    .option('--unused', 'Delete all screen schemes not linked to any issue type screen schemes')
+    .option('--exec', 'Execute deletion (without this option, only preview what would be deleted)')
     .option('-u, --url <url>', 'Jira instance URL')
     .option('-e, --email <email>', 'Jira user email')
     .option('-t, --token <token>', 'Jira API token')
@@ -443,9 +513,24 @@ program.command('delete-screen-schemes')
             console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
             return;
         }
-        const schemeIds = options.ids.split(',').map(id => id.trim());
+        
+        if (options.unused && options.ids) {
+            console.error('Cannot specify both --ids and --unused. Choose one.');
+            return;
+        }
+        
+        if (!options.unused && !options.ids) {
+            console.error('Must specify either --ids or --unused.');
+            return;
+        }
+        
         try {
-            await deleteScreenSchemes(config, schemeIds);
+            if (options.unused) {
+                await deleteScreenSchemes(config, [], { unused: true, exec: options.exec });
+            } else {
+                const schemeIds = options.ids.split(',').map(id => id.trim());
+                await deleteScreenSchemes(config, schemeIds, { unused: false, exec: false });
+            }
         } catch (error) {
             console.error('Error deleting screen schemes:', error.response ? error.response.data : error.message);
         }

@@ -232,18 +232,26 @@ class JiraApi {
         return results;
     }
 
-    async listWorkflowSchemes() {
+    async listWorkflowSchemes(options = {}) {
         let allSchemes = [];
-        let startAt = 0;
-        const maxResults = 100;
+        let startAt = options.startAt || 0;
+        const maxResults = options.maxResults || 100;
         let hasMore = true;
 
         while (hasMore) {
+            const params = {
+                startAt: startAt,
+                maxResults: maxResults
+            };
+
+            // Add optional parameters if provided
+            if (options.id) params.id = options.id;
+            if (options.queryString) params.queryString = options.queryString;
+            if (options.orderBy) params.orderBy = options.orderBy;
+            if (options.expand) params.expand = options.expand;
+
             const response = await axios.get(`${this.url}/rest/api/3/workflowscheme`, this.createAxiosConfig({
-                params: {
-                    startAt: startAt,
-                    maxResults: maxResults
-                }
+                params: params
             }));
             
             allSchemes = allSchemes.concat(response.data.values);
@@ -272,6 +280,40 @@ class JiraApi {
         // Without this information, we cannot determine which schemes are inactive
         // Returning empty array to prevent accidental deletion
         return [];
+    }
+
+    async getUnusedIssueTypeScreenSchemes() {
+        const allSchemes = await this.listIssueTypeScreenSchemes({ expand: 'projects' });
+        return allSchemes.filter(scheme => {
+            // Check if scheme has no projects linked
+            return !scheme.projects || scheme.projects.length === 0;
+        });
+    }
+
+    async getUnusedIssueTypeSchemes() {
+        const allSchemes = await this.listIssueTypeSchemes({ expand: 'projects,issueTypes' });
+        return allSchemes.filter(scheme => {
+            // Check if scheme has no projects AND no issue types linked
+            const hasProjects = scheme.projects && scheme.projects.length > 0;
+            const hasIssueTypes = scheme.issueTypes && scheme.issueTypes.length > 0;
+            return !hasProjects && !hasIssueTypes;
+        });
+    }
+
+    async getUnusedScreenSchemes() {
+        const allSchemes = await this.listScreenSchemes({ expand: 'issueTypeScreenSchemes' });
+        return allSchemes.filter(scheme => {
+            // Check if scheme has no issue type screen schemes linked
+            return !scheme.issueTypeScreenSchemes || scheme.issueTypeScreenSchemes.length === 0;
+        });
+    }
+
+    async getUnusedWorkflowSchemes() {
+        const allSchemes = await this.listWorkflowSchemes({ expand: 'projects' });
+        return allSchemes.filter(scheme => {
+            // Check if scheme has no projects linked
+            return !scheme.projects || scheme.projects.length === 0;
+        });
     }
 
     async deleteWorkflowScheme(schemeId) {
@@ -444,7 +486,7 @@ class JiraApi {
             const params = {
                 startAt: startAt,
                 maxResults: maxResults,
-                expand: 'projects'
+                expand: 'issueTypeScreenSchemes'
             };
 
             // Add optional parameters if provided (override expand if specified)

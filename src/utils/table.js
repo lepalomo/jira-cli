@@ -127,17 +127,24 @@ function createIssueTypesTable(issueTypes) {
 
 function createScreenSchemesTable(schemes) {
     const table = new Table({
-        head: ['ID', 'Nome', 'Descrição', 'Projetos'],
-        colWidths: [10, 30, 40, 20]
+        head: ['ID', 'Nome', 'Descrição', 'Issue Type Screen Schemes'],
+        colWidths: [10, 30, 40, 30]
     });
 
     schemes.forEach(scheme => {
-        const projectCount = scheme.projects?.total || 0;
+        // Try to get project count first, fall back to issue type screen scheme count
+        let count = 0;
+        if (scheme.projects?.total !== undefined) {
+            count = scheme.projects.total;
+        } else if (scheme.issueTypeScreenSchemes?.total !== undefined) {
+            count = scheme.issueTypeScreenSchemes.total;
+        }
+        
         table.push([
             scheme.id || 'N/A',
             scheme.name || 'N/A',
             scheme.description || 'Sem descrição',
-            projectCount.toString()
+            count.toString()
         ]);
     });
 
