@@ -30,6 +30,72 @@ A command-line interface tool to interact with Jira API v3.
 
 - **Linux/Mac/WSL**: `./install.sh`
 - **Windows PowerShell**: `.\install.ps1`
+- **Windows (if PowerShell blocked)**: `install.bat`
+
+### Troubleshooting Installation Issues
+
+#### PowerShell Execution Policy Error
+If you see an error like:
+```
+.\install.ps1 : O arquivo ... não pode ser carregado porque a execução de scripts foi desabilitada neste sistema.
+```
+
+**Solutions:**
+1. **Use the batch file**: Run `install.bat` instead
+2. **Run with bypass policy**: `powershell -ExecutionPolicy Bypass -File install.ps1`
+3. **Run as Administrator**: Open PowerShell as Admin and run `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`
+
+#### npm Command Not Found
+Make sure Node.js is installed from [nodejs.org](https://nodejs.org/). After installation, restart your terminal.
+
+#### Permission Errors on Linux/macOS
+You may need to use `sudo`:
+```bash
+sudo npm link
+```
+
+### Uninstallation / Cleanup
+
+If you need to remove the CLI or fix a broken installation:
+
+1. **Remove global symlink**:
+   ```bash
+   npm unlink -g jira-cli
+   ```
+   or
+   ```bash
+   npm remove -g jira-cli
+   ```
+
+2. **Clean local dependencies** (optional):
+   ```bash
+   rm -rf node_modules
+   rm package-lock.json
+   ```
+
+3. **Reinstall fresh**:
+   ```bash
+   npm install
+   npm link
+   ```
+
+4. **For complete removal** (if you want to start over):
+   ```bash
+   # Remove the global symlink
+   npm unlink -g jira-cli
+   
+   # Delete the repository folder
+   cd ..
+   rm -rf jira-cli
+   
+   # Clone fresh
+   git clone https://github.com/lepalomo/jira-cli.git
+   cd jira-cli
+   
+   # Install fresh
+   npm install
+   npm link
+   ```
 
 ## Usage
 
