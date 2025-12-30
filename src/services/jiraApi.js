@@ -4,6 +4,24 @@ class JiraApi {
     constructor(url, email, token) {
         this.url = url;
         this.auth = Buffer.from(`${email}:${token}`).toString('base64');
+        this.timeout = 120000; // 120 seconds timeout
+    }
+
+    /**
+     * Creates axios configuration with authentication headers and timeout
+     * @param {Object} additionalConfig - Additional axios configuration
+     * @returns {Object} Axios configuration object
+     */
+    createAxiosConfig(additionalConfig = {}) {
+        return {
+            headers: {
+                'Authorization': `Basic ${this.auth}`,
+                'Accept': 'application/json',
+                ...(additionalConfig.headers || {})
+            },
+            timeout: this.timeout,
+            ...additionalConfig
+        };
     }
 
     async listProjects() {
@@ -13,11 +31,7 @@ class JiraApi {
         let hasMore = true;
 
         while (hasMore) {
-            const response = await axios.get(`${this.url}/rest/api/3/project/search`, {
-                headers: {
-                    'Authorization': `Basic ${this.auth}`,
-                    'Accept': 'application/json'
-                },
+            const response = await axios.get(`${this.url}/rest/api/3/project/search`, this.createAxiosConfig({
                 params: {
                     expand: 'insight,projectCategory,lead',
                     status: 'live',
@@ -25,7 +39,7 @@ class JiraApi {
                     startAt: startAt,
                     maxResults: maxResults
                 }
-            });
+            }));
             
             allProjects = allProjects.concat(response.data.values);
             hasMore = !response.data.isLast;
@@ -36,45 +50,31 @@ class JiraApi {
     }
 
     async archiveProject(projectKey) {
-        await axios.put(`${this.url}/rest/api/3/project/${projectKey}/archive`, {}, {
-            headers: {
-                'Authorization': `Basic ${this.auth}`,
-                'Accept': 'application/json'
-            }
-        });
+        await axios.put(`${this.url}/rest/api/3/project/${projectKey}/archive`, {}, this.createAxiosConfig());
     }
 
     async updateProject(projectKey, updates) {
-        const response = await axios.put(`${this.url}/rest/api/3/project/${projectKey}`, updates, {
+        const response = await axios.put(`${this.url}/rest/api/3/project/${projectKey}`, updates, this.createAxiosConfig({
             headers: {
-                'Authorization': `Basic ${this.auth}`,
-                'Accept': 'application/json',
                 'Content-Type': 'application/json'
             }
-        });
+        }));
         return response.data;
     }
 
     async updateProjectCategory(projectKey, categoryId) {
         const response = await axios.put(`${this.url}/rest/api/3/project/${projectKey}`, {
             categoryId: parseInt(categoryId)
-        }, {
+        }, this.createAxiosConfig({
             headers: {
-                'Authorization': `Basic ${this.auth}`,
-                'Accept': 'application/json',
                 'Content-Type': 'application/json'
             }
-        });
+        }));
         return response.data;
     }
 
     async listCategories() {
-        const response = await axios.get(`${this.url}/rest/api/3/projectCategory`, {
-            headers: {
-                'Authorization': `Basic ${this.auth}`,
-                'Accept': 'application/json'
-            }
-        });
+        const response = await axios.get(`${this.url}/rest/api/3/projectCategory`, this.createAxiosConfig());
         return response.data;
     }
 
@@ -114,11 +114,7 @@ class JiraApi {
         let hasMore = true;
 
         while (hasMore) {
-            const response = await axios.get(`${this.url}/rest/api/3/project/search`, {
-                headers: {
-                    'Authorization': `Basic ${this.auth}`,
-                    'Accept': 'application/json'
-                },
+            const response = await axios.get(`${this.url}/rest/api/3/project/search`, this.createAxiosConfig({
                 params: {
                     expand: 'insight,projectCategory,lead',
                     status: 'live',
@@ -127,7 +123,7 @@ class JiraApi {
                     startAt: startAt,
                     maxResults: maxResults
                 }
-            });
+            }));
             
             allProjects = allProjects.concat(response.data.values);
             hasMore = !response.data.isLast;
@@ -138,12 +134,7 @@ class JiraApi {
     }
 
     async deleteProject(projectKey) {
-        await axios.delete(`${this.url}/rest/api/3/project/${projectKey}`, {
-            headers: {
-                'Authorization': `Basic ${this.auth}`,
-                'Accept': 'application/json'
-            }
-        });
+        await axios.delete(`${this.url}/rest/api/3/project/${projectKey}`, this.createAxiosConfig());
     }
 
     async deleteProjects(projectKeys) {
@@ -167,16 +158,12 @@ class JiraApi {
         let nextPageToken = null;
         
         do {
-            const response = await axios.get(`${this.url}/rest/api/3/workflow/${workflowId}/workflowSchemes`, {
-                headers: {
-                    'Authorization': `Basic ${this.auth}`,
-                    'Accept': 'application/json'
-                },
+            const response = await axios.get(`${this.url}/rest/api/3/workflow/${workflowId}/workflowSchemes`, this.createAxiosConfig({
                 params: {
                     ...(nextPageToken && { nextPageToken }),
                     maxResults: 50
                 }
-            });
+            }));
             
             if (response.data.workflowSchemes?.values) {
                 allSchemeIds = allSchemeIds.concat(
@@ -197,17 +184,13 @@ class JiraApi {
         let hasMore = true;
 
         while (hasMore) {
-            const response = await axios.get(`${this.url}/rest/api/3/workflows/search`, {
-                headers: {
-                    'Authorization': `Basic ${this.auth}`,
-                    'Accept': 'application/json'
-                },
+            const response = await axios.get(`${this.url}/rest/api/3/workflows/search`, this.createAxiosConfig({
                 params: {
                     startAt: startAt,
                     maxResults: maxResults,
                     isActive: isActive
                 }
-            });
+            }));
             
             allWorkflows = allWorkflows.concat(response.data.values);
             hasMore = !response.data.isLast;
@@ -230,12 +213,7 @@ class JiraApi {
     }
 
     async deleteWorkflow(workflowName) {
-        await axios.delete(`${this.url}/rest/api/3/workflow/${workflowName}`, {
-            headers: {
-                'Authorization': `Basic ${this.auth}`,
-                'Accept': 'application/json'
-            }
-        });
+        await axios.delete(`${this.url}/rest/api/3/workflow/${workflowName}`, this.createAxiosConfig());
     }
 
     async deleteWorkflows(workflowIds) {
@@ -261,57 +239,19 @@ class JiraApi {
         let hasMore = true;
 
         while (hasMore) {
-            const response = await axios.get(`${this.url}/rest/api/3/workflowscheme`, {
-                headers: {
-                    'Authorization': `Basic ${this.auth}`,
-                    'Accept': 'application/json'
-                },
+            const response = await axios.get(`${this.url}/rest/api/3/workflowscheme`, this.createAxiosConfig({
                 params: {
                     startAt: startAt,
                     maxResults: maxResults
                 }
-            });
+            }));
             
             allSchemes = allSchemes.concat(response.data.values);
             hasMore = !response.data.isLast;
             startAt += maxResults;
         }
         
-        // Verificar quais esquemas estão ativos (associados a projetos)
-        let activeSchemeIds = new Set();
-        let projectStartAt = 0;
-        const projectMaxResults = 100;
-        let hasMoreProjects = true;
-
-        while (hasMoreProjects) {
-            const projectsResponse = await axios.get(`${this.url}/rest/api/3/project/search`, {
-                headers: {
-                    'Authorization': `Basic ${this.auth}`,
-                    'Accept': 'application/json'
-                },
-                params: {
-                    expand: 'workflowScheme',
-                    startAt: projectStartAt,
-                    maxResults: projectMaxResults
-                }
-            });
-
-            const projects = projectsResponse.data.values;
-            projects.forEach(project => {
-                const schemeId = project.workflowScheme?.id;
-                if (schemeId) {
-                    activeSchemeIds.add(schemeId);
-                }
-            });
-
-            hasMoreProjects = !projectsResponse.data.isLast;
-            projectStartAt += projectMaxResults;
-        }
-        
-        return allSchemes.map(scheme => ({
-            ...scheme,
-            isActive: activeSchemeIds.has(scheme.id)
-        }));
+        return allSchemes;
     }
 
     async getInactiveWorkflowsForCleanup() {
@@ -328,17 +268,14 @@ class JiraApi {
     }
 
     async getInactiveWorkflowSchemesForCleanup() {
-        const allSchemes = await this.listWorkflowSchemes();
-        return allSchemes.filter(scheme => !scheme.isActive);
+        // Note: Jira API doesn't provide isActive status for workflow schemes
+        // Without this information, we cannot determine which schemes are inactive
+        // Returning empty array to prevent accidental deletion
+        return [];
     }
 
     async deleteWorkflowScheme(schemeId) {
-        await axios.delete(`${this.url}/rest/api/3/workflowscheme/${schemeId}`, {
-            headers: {
-                'Authorization': `Basic ${this.auth}`,
-                'Accept': 'application/json'
-            }
-        });
+        await axios.delete(`${this.url}/rest/api/3/workflowscheme/${schemeId}`, this.createAxiosConfig());
     }
 
     async deleteWorkflowSchemes(schemeIds) {
@@ -374,22 +311,19 @@ class JiraApi {
         while (hasMore) {
             const params = {
                 startAt: startAt,
-                maxResults: maxResults
+                maxResults: maxResults,
+                expand: 'projects'
             };
 
-            // Add optional parameters if provided
+            // Add optional parameters if provided (override expand if specified)
             if (options.id) params.id = options.id;
             if (options.queryString) params.queryString = options.queryString;
             if (options.orderBy) params.orderBy = options.orderBy;
             if (options.expand) params.expand = options.expand;
 
-            const response = await axios.get(`${this.url}/rest/api/3/issuetypescreenscheme`, {
-                headers: {
-                    'Authorization': `Basic ${this.auth}`,
-                    'Accept': 'application/json'
-                },
+            const response = await axios.get(`${this.url}/rest/api/3/issuetypescreenscheme`, this.createAxiosConfig({
                 params: params
-            });
+            }));
             
             allSchemes = allSchemes.concat(response.data.values);
             hasMore = !response.data.isLast;
@@ -400,12 +334,7 @@ class JiraApi {
     }
 
     async deleteIssueTypeScreenScheme(schemeId) {
-        await axios.delete(`${this.url}/rest/api/3/issuetypescreenscheme/${schemeId}`, {
-            headers: {
-                'Authorization': `Basic ${this.auth}`,
-                'Accept': 'application/json'
-            }
-        });
+        await axios.delete(`${this.url}/rest/api/3/issuetypescreenscheme/${schemeId}`, this.createAxiosConfig());
     }
 
     async deleteIssueTypeScreenSchemes(schemeIds) {
@@ -433,22 +362,19 @@ class JiraApi {
         while (hasMore) {
             const params = {
                 startAt: startAt,
-                maxResults: maxResults
+                maxResults: maxResults,
+                expand: 'projects,issueTypes'
             };
 
-            // Add optional parameters if provided
+            // Add optional parameters if provided (override expand if specified)
             if (options.id) params.id = options.id;
             if (options.queryString) params.queryString = options.queryString;
             if (options.orderBy) params.orderBy = options.orderBy;
             if (options.expand) params.expand = options.expand;
 
-            const response = await axios.get(`${this.url}/rest/api/3/issuetypescheme`, {
-                headers: {
-                    'Authorization': `Basic ${this.auth}`,
-                    'Accept': 'application/json'
-                },
+            const response = await axios.get(`${this.url}/rest/api/3/issuetypescheme`, this.createAxiosConfig({
                 params: params
-            });
+            }));
             
             allSchemes = allSchemes.concat(response.data.values);
             hasMore = !response.data.isLast;
@@ -459,12 +385,7 @@ class JiraApi {
     }
 
     async deleteIssueTypeScheme(schemeId) {
-        await axios.delete(`${this.url}/rest/api/3/issuetypescheme/${schemeId}`, {
-            headers: {
-                'Authorization': `Basic ${this.auth}`,
-                'Accept': 'application/json'
-            }
-        });
+        await axios.delete(`${this.url}/rest/api/3/issuetypescheme/${schemeId}`, this.createAxiosConfig());
     }
 
     async deleteIssueTypeSchemes(schemeIds) {
@@ -501,13 +422,9 @@ class JiraApi {
             if (options.orderBy) params.orderBy = options.orderBy;
             if (options.expand) params.expand = options.expand;
 
-            const response = await axios.get(`${this.url}/rest/api/3/issuetype`, {
-                headers: {
-                    'Authorization': `Basic ${this.auth}`,
-                    'Accept': 'application/json'
-                },
+            const response = await axios.get(`${this.url}/rest/api/3/issuetype`, this.createAxiosConfig({
                 params: params
-            });
+            }));
             
             allIssueTypes = allIssueTypes.concat(response.data.values);
             hasMore = !response.data.isLast;
@@ -526,22 +443,19 @@ class JiraApi {
         while (hasMore) {
             const params = {
                 startAt: startAt,
-                maxResults: maxResults
+                maxResults: maxResults,
+                expand: 'projects'
             };
 
-            // Add optional parameters if provided
+            // Add optional parameters if provided (override expand if specified)
             if (options.id) params.id = options.id;
             if (options.queryString) params.queryString = options.queryString;
             if (options.orderBy) params.orderBy = options.orderBy;
             if (options.expand) params.expand = options.expand;
 
-            const response = await axios.get(`${this.url}/rest/api/3/screenscheme`, {
-                headers: {
-                    'Authorization': `Basic ${this.auth}`,
-                    'Accept': 'application/json'
-                },
+            const response = await axios.get(`${this.url}/rest/api/3/screenscheme`, this.createAxiosConfig({
                 params: params
-            });
+            }));
             
             allSchemes = allSchemes.concat(response.data.values);
             hasMore = !response.data.isLast;
@@ -552,12 +466,7 @@ class JiraApi {
     }
 
     async deleteScreenScheme(screenSchemeId) {
-        await axios.delete(`${this.url}/rest/api/3/screenscheme/${screenSchemeId}`, {
-            headers: {
-                'Authorization': `Basic ${this.auth}`,
-                'Accept': 'application/json'
-            }
-        });
+        await axios.delete(`${this.url}/rest/api/3/screenscheme/${screenSchemeId}`, this.createAxiosConfig());
     }
 
     async deleteScreenSchemes(screenSchemeIds) {
@@ -577,12 +486,7 @@ class JiraApi {
     }
 
     async deleteIssueType(issueTypeId) {
-        await axios.delete(`${this.url}/rest/api/3/issuetype/${issueTypeId}`, {
-            headers: {
-                'Authorization': `Basic ${this.auth}`,
-                'Accept': 'application/json'
-            }
-        });
+        await axios.delete(`${this.url}/rest/api/3/issuetype/${issueTypeId}`, this.createAxiosConfig());
     }
 
     async deleteIssueTypes(issueTypeIds) {
@@ -619,13 +523,9 @@ class JiraApi {
             if (options.orderBy) params.orderBy = options.orderBy;
             if (options.expand) params.expand = options.expand;
 
-            const response = await axios.get(`${this.url}/rest/api/3/screens`, {
-                headers: {
-                    'Authorization': `Basic ${this.auth}`,
-                    'Accept': 'application/json'
-                },
+            const response = await axios.get(`${this.url}/rest/api/3/screens`, this.createAxiosConfig({
                 params: params
-            });
+            }));
             
             allScreens = allScreens.concat(response.data.values);
             hasMore = !response.data.isLast;
@@ -636,12 +536,7 @@ class JiraApi {
     }
 
     async deleteScreen(screenId) {
-        await axios.delete(`${this.url}/rest/api/3/screens/${screenId}`, {
-            headers: {
-                'Authorization': `Basic ${this.auth}`,
-                'Accept': 'application/json'
-            }
-        });
+        await axios.delete(`${this.url}/rest/api/3/screens/${screenId}`, this.createAxiosConfig());
     }
 
     async deleteScreens(screenIds) {

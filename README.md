@@ -461,6 +461,23 @@ jira-cli cleanup --workflows --workflow-schemes --exec
 
 ## Advanced Usage
 
+### Timeout Configuration
+
+All operations in the Jira CLI are protected by a 120-second (2-minute) timeout. This prevents commands from hanging indefinitely due to network issues or slow Jira API responses.
+
+**Features:**
+- **HTTP Request Timeout**: All axios HTTP requests have a 120-second timeout configured
+- **Command-Level Timeout**: All command functions are wrapped with a 120-second timeout
+- **Graceful Error Handling**: Timeout errors provide descriptive messages indicating which operation timed out
+
+**Timeout Error Example:**
+```
+Error: Operation "listProjects" timed out after 120 seconds
+```
+
+**Customization:**
+The timeout duration can be adjusted by modifying the `timeout` property in the `JiraApi` constructor in `src/services/jiraApi.js` and the timeout value in `src/commands/commands.js`.
+
 ### Using Configuration Overrides
 
 All Jira-interacting commands support temporary credential overrides:
