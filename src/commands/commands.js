@@ -956,6 +956,365 @@ async function deleteScreens(config, screenIds) {
     });
 }
 
+async function cleanupComplete(config, execute = false) {
+    const Loader = require('../utils/loader');
+    const EmailLogger = require('../utils/emailLogger');
+    let emailLogger = null;
+
+    if (execute) {
+        emailLogger = new EmailLogger(config);
+    }
+
+    const loader = new Loader(execute ? 'Executando limpeza completa' : 'Analisando recursos para limpeza completa');
+    loader.start();
+
+    try {
+        const jira = new JiraApi(config.url, config.email, config.token);
+        
+        // 1. Unused projects (archived)
+        loader.text = execute ? 'Buscando e excluindo projetos não utilizados' : 'Buscando projetos não utilizados';
+        const unusedProjects = await jira.getUnusedProjects();
+        if (unusedProjects.length > 0) {
+            loader.stop();
+            console.log(`\n1. Projetos não utilizados (arquivados) encontrados: ${unusedProjects.length}`);
+            if (!execute) {
+                const Table = require('cli-table3');
+                const table = new Table({
+                    head: ['Key', 'Nome'],
+                    colWidths: [20, 60]
+                });
+                unusedProjects.forEach(project => {
+                    table.push([project.key || 'N/A', project.name || 'N/A']);
+                });
+                console.log(table.toString());
+                console.log('Para excluir, adicione a opção --exec');
+            } else {
+                console.log(`Serão excluídos ${unusedProjects.length} projetos.`);
+                const readline = require('readline');
+                const rl = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout
+                });
+                const answer = await new Promise(resolve => {
+                    rl.question('Confirma a exclusão dos projetos? (Y/N): ', resolve);
+                });
+                rl.close();
+                if (answer.toUpperCase() !== 'Y') {
+                    console.log('Exclusão de projetos cancelada.');
+                } else {
+                    const projectKeys = unusedProjects.map(p => p.key);
+                    const results = await jira.deleteProjects(projectKeys);
+                    console.log(`Resultados da exclusão de projetos (${results.length}):`);
+                    results.forEach(result => {
+                        const message = result.success
+                            ? `✓ Projeto ${result.key} excluído com sucesso.`
+                            : `✗ Erro ao excluir projeto ${result.key}: ${result.error}`;
+                        console.log(message);
+                    });
+                }
+            }
+            loader.start();
+        } else {
+            console.log('\n1. Nenhum projeto não utilizado encontrado.');
+        }
+
+        // 2. Unused workflow schemes
+        loader.text = execute ? 'Buscando e excluindo workflow schemes não utilizados' : 'Buscando workflow schemes não utilizados';
+        const unusedWorkflowSchemes = await jira.getUnusedWorkflowSchemes();
+        if (unusedWorkflowSchemes.length > 0) {
+            loader.stop();
+            console.log(`\n2. Workflow schemes não utilizados encontrados: ${unusedWorkflowSchemes.length}`);
+            if (!execute) {
+                const Table = require('cli-table3');
+                const table = new Table({
+                    head: ['ID', 'Nome', 'Descrição'],
+                    colWidths: [30, 40, 50]
+                });
+                unusedWorkflowSchemes.forEach(scheme => {
+                    table.push([scheme.id || 'N/A', scheme.name || 'N/A', scheme.description || 'Sem descrição']);
+                });
+                console.log(table.toString());
+                console.log('Para excluir, adicione a opção --exec');
+            } else {
+                console.log(`Serão excluídos ${unusedWorkflowSchemes.length} workflow schemes.`);
+                const readline = require('readline');
+                const rl = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout
+                });
+                const answer = await new Promise(resolve => {
+                    rl.question('Confirma a exclusão dos workflow schemes? (Y/N): ', resolve);
+                });
+                rl.close();
+                if (answer.toUpperCase() !== 'Y') {
+                    console.log('Exclusão de workflow schemes cancelada.');
+                } else {
+                    const schemeIds = unusedWorkflowSchemes.map(s => s.id);
+                    const results = await jira.deleteWorkflowSchemes(schemeIds);
+                    console.log(`Resultados da exclusão de workflow schemes (${results.length}):`);
+                    results.forEach(result => {
+                        const message = result.success
+                            ? `✓ Workflow scheme ${result.id} excluído com sucesso.`
+                            : `✗ Erro ao excluir workflow scheme ${result.id}: ${result.error}`;
+                        console.log(message);
+                    });
+                }
+            }
+            loader.start();
+        } else {
+            console.log('\n2. Nenhum workflow scheme não utilizado encontrado.');
+        }
+
+        // 3. Unused workflows (inactive without schemes)
+        loader.text = execute ? 'Buscando e excluindo workflows não utilizados' : 'Buscando workflows não utilizados';
+        const unusedWorkflows = await jira.getInactiveWorkflowsForCleanup();
+        if (unusedWorkflows.length > 0) {
+            loader.stop();
+            console.log(`\n3. Workflows inativos não utilizados encontrados: ${unusedWorkflows.length}`);
+            if (!execute) {
+                const Table = require('cli-table3');
+                const table = new Table({
+                    head: ['ID', 'Nome'],
+                    colWidths: [40, 80]
+                });
+                unusedWorkflows.forEach(workflow => {
+                    table.push([workflow.id || 'N/A', workflow.name || 'N/A']);
+                });
+                console.log(table.toString());
+                console.log('Para excluir, adicione a opção --exec');
+            } else {
+                console.log(`Serão excluídos ${unusedWorkflows.length} workflows.`);
+                const readline = require('readline');
+                const rl = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout
+                });
+                const answer = await new Promise(resolve => {
+                    rl.question('Confirma a exclusão dos workflows? (Y/N): ', resolve);
+                });
+                rl.close();
+                if (answer.toUpperCase() !== 'Y') {
+                    console.log('Exclusão de workflows cancelada.');
+                } else {
+                    const workflowIds = unusedWorkflows.map(w => w.id);
+                    const results = await jira.deleteWorkflows(workflowIds);
+                    console.log(`Resultados da exclusão de workflows (${results.length}):`);
+                    results.forEach(result => {
+                        const message = result.success
+                            ? `✓ Workflow ${result.id} excluído com sucesso.`
+                            : `✗ Erro ao excluir workflow ${result.id}: ${result.error}`;
+                        console.log(message);
+                    });
+                }
+            }
+            loader.start();
+        } else {
+            console.log('\n3. Nenhum workflow inativo não utilizado encontrado.');
+        }
+
+        // 4. Unused issue type screen schemes
+        loader.text = execute ? 'Buscando e excluindo issue type screen schemes não utilizados' : 'Buscando issue type screen schemes não utilizados';
+        const unusedIssueTypeScreenSchemes = await jira.getUnusedIssueTypeScreenSchemes();
+        if (unusedIssueTypeScreenSchemes.length > 0) {
+            loader.stop();
+            console.log(`\n4. Issue type screen schemes não utilizados encontrados: ${unusedIssueTypeScreenSchemes.length}`);
+            if (!execute) {
+                const Table = require('cli-table3');
+                const table = new Table({
+                    head: ['ID', 'Nome', 'Descrição'],
+                    colWidths: [30, 40, 50]
+                });
+                unusedIssueTypeScreenSchemes.forEach(scheme => {
+                    table.push([scheme.id || 'N/A', scheme.name || 'N/A', scheme.description || 'Sem descrição']);
+                });
+                console.log(table.toString());
+                console.log('Para excluir, adicione a opção --exec');
+            } else {
+                console.log(`Serão excluídos ${unusedIssueTypeScreenSchemes.length} issue type screen schemes.`);
+                const readline = require('readline');
+                const rl = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout
+                });
+                const answer = await new Promise(resolve => {
+                    rl.question('Confirma a exclusão dos issue type screen schemes? (Y/N): ', resolve);
+                });
+                rl.close();
+                if (answer.toUpperCase() !== 'Y') {
+                    console.log('Exclusão de issue type screen schemes cancelada.');
+                } else {
+                    const schemeIds = unusedIssueTypeScreenSchemes.map(s => s.id);
+                    const results = await jira.deleteIssueTypeScreenSchemes(schemeIds);
+                    console.log(`Resultados da exclusão de issue type screen schemes (${results.length}):`);
+                    results.forEach(result => {
+                        const message = result.success
+                            ? `✓ Issue type screen scheme ${result.id} excluído com sucesso.`
+                            : `✗ Erro ao excluir issue type screen scheme ${result.id}: ${result.error}`;
+                        console.log(message);
+                    });
+                }
+            }
+            loader.start();
+        } else {
+            console.log('\n4. Nenhum issue type screen scheme não utilizado encontrado.');
+        }
+
+        // 5. Unused issue type schemes
+        loader.text = execute ? 'Buscando e excluindo issue type schemes não utilizados' : 'Buscando issue type schemes não utilizados';
+        const unusedIssueTypeSchemes = await jira.getUnusedIssueTypeSchemes();
+        if (unusedIssueTypeSchemes.length > 0) {
+            loader.stop();
+            console.log(`\n5. Issue type schemes não utilizados encontrados: ${unusedIssueTypeSchemes.length}`);
+            if (!execute) {
+                const Table = require('cli-table3');
+                const table = new Table({
+                    head: ['ID', 'Nome', 'Descrição'],
+                    colWidths: [30, 40, 50]
+                });
+                unusedIssueTypeSchemes.forEach(scheme => {
+                    table.push([scheme.id || 'N/A', scheme.name || 'N/A', scheme.description || 'Sem descrição']);
+                });
+                console.log(table.toString());
+                console.log('Para excluir, adicione a opção --exec');
+            } else {
+                console.log(`Serão excluídos ${unusedIssueTypeSchemes.length} issue type schemes.`);
+                const readline = require('readline');
+                const rl = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout
+                });
+                const answer = await new Promise(resolve => {
+                    rl.question('Confirma a exclusão dos issue type schemes? (Y/N): ', resolve);
+                });
+                rl.close();
+                if (answer.toUpperCase() !== 'Y') {
+                    console.log('Exclusão de issue type schemes cancelada.');
+                } else {
+                    const schemeIds = unusedIssueTypeSchemes.map(s => s.id);
+                    const results = await jira.deleteIssueTypeSchemes(schemeIds);
+                    console.log(`Resultados da exclusão de issue type schemes (${results.length}):`);
+                    results.forEach(result => {
+                        const message = result.success
+                            ? `✓ Issue type scheme ${result.id} excluído com sucesso.`
+                            : `✗ Erro ao excluir issue type scheme ${result.id}: ${result.error}`;
+                        console.log(message);
+                    });
+                }
+            }
+            loader.start();
+        } else {
+            console.log('\n5. Nenhum issue type scheme não utilizado encontrado.');
+        }
+
+        // 6. Unused screen schemes
+        loader.text = execute ? 'Buscando e excluindo screen schemes não utilizados' : 'Buscando screen schemes não utilizados';
+        const unusedScreenSchemes = await jira.getUnusedScreenSchemes();
+        if (unusedScreenSchemes.length > 0) {
+            loader.stop();
+            console.log(`\n6. Screen schemes não utilizados encontrados: ${unusedScreenSchemes.length}`);
+            if (!execute) {
+                const Table = require('cli-table3');
+                const table = new Table({
+                    head: ['ID', 'Nome', 'Descrição'],
+                    colWidths: [30, 40, 50]
+                });
+                unusedScreenSchemes.forEach(scheme => {
+                    table.push([scheme.id || 'N/A', scheme.name || 'N/A', scheme.description || 'Sem descrição']);
+                });
+                console.log(table.toString());
+                console.log('Para excluir, adicione a opção --exec');
+            } else {
+                console.log(`Serão excluídos ${unusedScreenSchemes.length} screen schemes.`);
+                const readline = require('readline');
+                const rl = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout
+                });
+                const answer = await new Promise(resolve => {
+                    rl.question('Confirma a exclusão dos screen schemes? (Y/N): ', resolve);
+                });
+                rl.close();
+                if (answer.toUpperCase() !== 'Y') {
+                    console.log('Exclusão de screen schemes cancelada.');
+                } else {
+                    const schemeIds = unusedScreenSchemes.map(s => s.id);
+                    const results = await jira.deleteScreenSchemes(schemeIds);
+                    console.log(`Resultados da exclusão de screen schemes (${results.length}):`);
+                    results.forEach(result => {
+                        const message = result.success
+                            ? `✓ Screen scheme ${result.id} excluído com sucesso.`
+                            : `✗ Erro ao excluir screen scheme ${result.id}: ${result.error}`;
+                        console.log(message);
+                    });
+                }
+            }
+            loader.start();
+        } else {
+            console.log('\n6. Nenhum screen scheme não utilizado encontrado.');
+        }
+
+        // 7. Unused screens
+        loader.text = execute ? 'Buscando e excluindo screens não utilizados' : 'Buscando screens não utilizados';
+        const unusedScreens = await jira.getUnusedScreens();
+        if (unusedScreens.length > 0) {
+            loader.stop();
+            console.log(`\n7. Screens não utilizados encontrados: ${unusedScreens.length}`);
+            if (!execute) {
+                const Table = require('cli-table3');
+                const table = new Table({
+                    head: ['ID', 'Nome'],
+                    colWidths: [40, 80]
+                });
+                unusedScreens.forEach(screen => {
+                    table.push([screen.id || 'N/A', screen.name || 'N/A']);
+                });
+                console.log(table.toString());
+                console.log('Para excluir, adicione a opção --exec');
+            } else {
+                console.log(`Serão excluídos ${unusedScreens.length} screens.`);
+                const readline = require('readline');
+                const rl = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout
+                });
+                const answer = await new Promise(resolve => {
+                    rl.question('Confirma a exclusão dos screens? (Y/N): ', resolve);
+                });
+                rl.close();
+                if (answer.toUpperCase() !== 'Y') {
+                    console.log('Exclusão de screens cancelada.');
+                } else {
+                    const screenIds = unusedScreens.map(s => s.id);
+                    const results = await jira.deleteScreens(screenIds);
+                    console.log(`Resultados da exclusão de screens (${results.length}):`);
+                    results.forEach(result => {
+                        const message = result.success
+                            ? `✓ Screen ${result.id} excluído com sucesso.`
+                            : `✗ Erro ao excluir screen ${result.id}: ${result.error}`;
+                        console.log(message);
+                    });
+                }
+            }
+            loader.start();
+        } else {
+            console.log('\n7. Nenhum screen não utilizado encontrado.');
+        }
+
+        loader.stop();
+        console.log('\n' + '='.repeat(60));
+        console.log('Limpeza completa concluída.');
+        if (execute && emailLogger) {
+            await emailLogger.sendLog('Cleanup Complete - Executado', 'Limpeza completa executada com sucesso.');
+        }
+    } catch (error) {
+        loader.stop();
+        if (emailLogger) {
+            await emailLogger.sendLog('Cleanup Complete - Erro', `Erro: ${error.message}`);
+        }
+        throw error;
+    }
+}
+
 const commands = {
     listProjects,
     listCategories,
@@ -972,6 +1331,7 @@ const commands = {
     listWorkflowSchemes,
     cleanupWorkflows,
     cleanupWorkflowSchemes,
+    cleanupComplete,
     listIssueTypeScreenSchemes,
     deleteIssueTypeScreenSchemes,
     listIssueTypeSchemes,

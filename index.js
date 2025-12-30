@@ -2,7 +2,7 @@
 
 const { Command } = require('commander');
 const { loadConfig, saveConfig } = require('./src/commands/config');
-const { listProjects, listCategories, archiveProject, archiveProjects, updateProjectName, updateProjectCategory, updateProjectsCategory, listProjectsByCategory, deleteProjects, listWorkflows, deleteWorkflows, deleteWorkflowSchemes, listWorkflowSchemes, cleanupWorkflows, cleanupWorkflowSchemes, listIssueTypeScreenSchemes, deleteIssueTypeScreenSchemes, listIssueTypeSchemes, deleteIssueTypeSchemes, listIssueTypes, deleteIssueTypes, listScreenSchemes, deleteScreenSchemes, listScreens, deleteScreens } = require('./src/commands/commands');
+const { listProjects, listCategories, archiveProject, archiveProjects, updateProjectName, updateProjectCategory, updateProjectsCategory, listProjectsByCategory, deleteProjects, listWorkflows, deleteWorkflows, deleteWorkflowSchemes, listWorkflowSchemes, cleanupWorkflows, cleanupWorkflowSchemes, cleanupComplete, listIssueTypeScreenSchemes, deleteIssueTypeScreenSchemes, listIssueTypeSchemes, deleteIssueTypeSchemes, listIssueTypes, deleteIssueTypes, listScreenSchemes, deleteScreenSchemes, listScreens, deleteScreens } = require('./src/commands/commands');
 
 const program = new Command();
 
@@ -575,7 +575,8 @@ program.command('delete-screens')
     });
 
 program.command('cleanup')
-    .description('Limpeza de recursos do Jira')
+    .description('Limpeza de recursos do Jira. Use --complete para limpeza completa sequencial de recursos não utilizados.')
+    .option('--complete', 'Limpeza completa sequencial: projetos arquivados, workflow schemes, workflows, issue type screen schemes, issue type schemes, screen schemes, screens')
     .option('--workflows', 'Limpar workflows inativos sem esquemas')
     .option('--workflow-schemes', 'Limpar workflow schemes inativos')
     .option('--wf-schemes', 'Alias para --workflow-schemes')
@@ -589,10 +590,22 @@ program.command('cleanup')
             console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
             return;
         }
+        const hasComplete = options.complete;
         const hasWorkflows = options.workflows;
         const hasSchemes = options['workflow-schemes'] || options['wf-schemes'];
+        
+        if (hasComplete) {
+            // Execute complete cleanup
+            try {
+                await cleanupComplete(config, options.exec);
+            } catch (error) {
+                console.error('Error during complete cleanup:', error.response ? error.response.data : error.message);
+            }
+            return;
+        }
+        
         if (!hasWorkflows && !hasSchemes) {
-            console.error('Especifique o tipo de limpeza: --workflows ou --workflow-schemes (--wf-schemes)');
+            console.error('Especifique o tipo de limpeza: --workflows, --workflow-schemes (--wf-schemes) ou --complete');
             return;
         }
         try {

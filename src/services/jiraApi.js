@@ -24,7 +24,7 @@ class JiraApi {
         };
     }
 
-    async listProjects() {
+    async listProjects(options = {}) {
         let allProjects = [];
         let startAt = 0;
         const maxResults = 100;
@@ -34,7 +34,7 @@ class JiraApi {
             const response = await axios.get(`${this.url}/rest/api/3/project/search`, this.createAxiosConfig({
                 params: {
                     expand: 'insight,projectCategory,lead',
-                    status: 'live',
+                    status: options.status || 'live',
                     orderBy: '-lastIssueUpdatedTime',
                     startAt: startAt,
                     maxResults: maxResults
@@ -76,6 +76,11 @@ class JiraApi {
     async listCategories() {
         const response = await axios.get(`${this.url}/rest/api/3/projectCategory`, this.createAxiosConfig());
         return response.data;
+    }
+
+    async getUnusedProjects() {
+        // Archived projects are considered unused
+        return await this.listProjects({ status: 'archived' });
     }
 
     async archiveProjects(projectKeys) {
@@ -575,6 +580,38 @@ class JiraApi {
         }
         
         return allScreens;
+    }
+
+    async getUnusedScreens() {
+        // Fetch all screens
+        const allScreens = await this.listScreens();
+        let screenSchemes = [];
+        try {
+            // Try to fetch screen schemes with screens expanded (may not be supported)
+            screenSchemes = await this.listScreenSchemes({ expand: 'screens' });
+        } catch (error) {
+            // If expand 'screens' is not supported, we cannot determine unused screens
+            // Log warning and treat all screens as used (return empty array)
+            console.warn('Cannot expand screens in screen schemes:', error.response?.data?.errorMessages?.[0] || error.message);
+            console.warn('Assuming all screens are used. No screens will be marked as unused.');
+            return [];
+        }
+        
+        // Collect screen IDs referenced in screen schemes
+        const usedScreenIds = new Set();
+        screenSchemes.forEach(scheme => {
+            if (scheme.screens) {
+                // The screens object may contain fields like 'default', 'edit', 'view', etc.
+                Object.values(scheme.screens).forEach(screen => {
+                    if (screen && screen.id) {
+                        usedScreenIds.add(screen.id);
+                    }
+                });
+            }
+        });
+        
+        // Return screens not referenced
+        return allScreens.filter(screen => !usedScreenIds.has(screen.id));
     }
 
     async deleteScreen(screenId) {
