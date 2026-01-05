@@ -62,7 +62,7 @@ Get up and running in **under 5 minutes**! Just follow these simple steps:
 ```
 
 #### Step-by-Step Instructions:
-1. **Download** the pre-built `jira-cli.exe` from the [Releases page](#) (coming soon!)
+1. **Download** the pre-built `jira-cli.exe` from the /dist directory
 2. **Place** the executable in a directory that's in your system PATH
    - Example: `C:\Users\YourName\bin\` or `C:\Windows\System32\`
 3. **Open** Command Prompt or PowerShell
