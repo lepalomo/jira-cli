@@ -30,4 +30,3 @@ Thumbs.db
 #build
 BUILD.md
 create-msi.js
-dist/
