@@ -2,45 +2,6 @@
 
 A command-line interface tool to interact with Jira API v3.
 
-## Installation
-
-### Option 1: Download Windows Executable
-
-Download the standalone Windows executable `jira-cli.exe`.
-
-**Usage:**
-1. Download `jira-cli.exe`
-2. Run from command prompt or PowerShell:
-   ```cmd
-   jira-cli.exe --help
-   ```
-
-### Option 2: Run from Source
-
-For development or Linux/macOS usage:
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/lepalomo/jira-cli.git
-   cd jira-cli
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Run directly**:
-   ```bash
-   npm start -- --help
-   ```
-
-## Prerequisites
-
-- **Windows executable**: No prerequisites, runs standalone
-- **Source builds**: Node.js v14+ and npm
-- **Jira account** with API access (generate API token from Jira settings)
-
 ## Quick Start
 
 1. **Set your Jira credentials**:
@@ -257,17 +218,33 @@ jira-cli list-workflow-schemes -u https://test.atlassian.net -e test@example.com
 ```
 
 #### `delete-workflow-schemes`
-Delete multiple workflow schemes by ID.
+Delete multiple workflow schemes. Use `--unused` to delete schemes not linked to any projects.
 
 **Options:**
-- `-i, --ids <ids>`: Workflow scheme IDs separated by comma (e.g., ID1,ID2,ID3) (required)
+- `-i, --ids <ids>`: Workflow scheme IDs separated by comma (e.g., ID1,ID2,ID3)
+- `--unused`: Delete all workflow schemes not linked to any projects
+- `--exec`: Execute deletion (without this option, only preview what would be deleted)
 - `-u, --url <url>`: Jira instance URL
 - `-e, --email <email>`: Jira user email
 - `-t, --token <token>`: Jira API token
 
-**Example:**
+**Note:** You must specify either `--ids` or `--unused`, but not both.
+
+**Examples:**
+
+Delete specific workflow schemes:
 ```bash
 jira-cli delete-workflow-schemes -i 201,202,203
+```
+
+Preview which unused workflow schemes would be deleted:
+```bash
+jira-cli delete-workflow-schemes --unused
+```
+
+Execute deletion of unused workflow schemes:
+```bash
+jira-cli delete-workflow-schemes --unused --exec
 ```
 
 ### Workflow Related
@@ -291,17 +268,33 @@ jira-cli list-workflows --inactive -u https://test.atlassian.net -e test@example
 ```
 
 #### `delete-workflows`
-Delete multiple workflows by ID.
+Delete multiple workflows. Use `--unused` to delete inactive workflows not linked to any schemes.
 
 **Options:**
-- `-i, --ids <ids>`: Workflow IDs separated by comma (e.g., ID1,ID2,ID3) (required)
+- `-i, --ids <ids>`: Workflow IDs separated by comma (e.g., ID1,ID2,ID3)
+- `--unused`: Delete all inactive workflows not linked to any schemes
+- `--exec`: Execute deletion (without this option, only preview what would be deleted)
 - `-u, --url <url>`: Jira instance URL
 - `-e, --email <email>`: Jira user email
 - `-t, --token <token>`: Jira API token
 
-**Example:**
+**Note:** You must specify either `--ids` or `--unused`, but not both.
+
+**Examples:**
+
+Delete specific workflows:
 ```bash
 jira-cli delete-workflows -i 101,102,103
+```
+
+Preview which unused workflows would be deleted:
+```bash
+jira-cli delete-workflows --unused
+```
+
+Execute deletion of unused workflows:
+```bash
+jira-cli delete-workflows --unused --exec
 ```
 
 ### Issue Type Related
@@ -321,17 +314,33 @@ jira-cli list-issue-type-screen-schemes -u https://test.atlassian.net -e test@ex
 ```
 
 #### `delete-issue-type-screen-schemes`
-Delete multiple issue type screen schemes.
+Delete multiple issue type screen schemes. Use `--unused` to delete schemes not linked to any projects.
 
 **Options:**
-- `-i, --ids <ids>`: Issue type screen scheme IDs separated by comma (e.g., ID1,ID2,ID3) (required)
+- `-i, --ids <ids>`: Issue type screen scheme IDs separated by comma (e.g., ID1,ID2,ID3)
+- `--unused`: Delete all issue type screen schemes not linked to any projects
+- `--exec`: Execute deletion (without this option, only preview what would be deleted)
 - `-u, --url <url>`: Jira instance URL
 - `-e, --email <email>`: Jira user email
 - `-t, --token <token>`: Jira API token
 
-**Example:**
+**Note:** You must specify either `--ids` or `--unused`, but not both.
+
+**Examples:**
+
+Delete specific issue type screen schemes:
 ```bash
 jira-cli delete-issue-type-screen-schemes -i 301,302,303
+```
+
+Preview which unused issue type screen schemes would be deleted:
+```bash
+jira-cli delete-issue-type-screen-schemes --unused
+```
+
+Execute deletion of unused issue type screen schemes:
+```bash
+jira-cli delete-issue-type-screen-schemes --unused --exec
 ```
 
 #### `list-issue-type-schemes`
@@ -349,17 +358,33 @@ jira-cli list-issue-type-schemes -u https://test.atlassian.net -e test@example.c
 ```
 
 #### `delete-issue-type-schemes`
-Delete multiple issue type schemes.
+Delete multiple issue type schemes. Use `--unused` to delete schemes not linked to any projects AND any issue types.
 
 **Options:**
-- `-i, --ids <ids>`: Issue type scheme IDs separated by comma (e.g., ID1,ID2,ID3) (required)
+- `-i, --ids <ids>`: Issue type scheme IDs separated by comma (e.g., ID1,ID2,ID3)
+- `--unused`: Delete all issue type schemes not linked to any projects AND any issue types
+- `--exec`: Execute deletion (without this option, only preview what would be deleted)
 - `-u, --url <url>`: Jira instance URL
 - `-e, --email <email>`: Jira user email
 - `-t, --token <token>`: Jira API token
 
-**Example:**
+**Note:** You must specify either `--ids` or `--unused`, but not both.
+
+**Examples:**
+
+Delete specific issue type schemes:
 ```bash
 jira-cli delete-issue-type-schemes -i 401,402,403
+```
+
+Preview which unused issue type schemes would be deleted:
+```bash
+jira-cli delete-issue-type-schemes --unused
+```
+
+Execute deletion of unused issue type schemes:
+```bash
+jira-cli delete-issue-type-schemes --unused --exec
 ```
 
 #### `list-issue-types`
@@ -407,17 +432,33 @@ jira-cli list-screen-schemes -u https://test.atlassian.net -e test@example.com -
 ```
 
 #### `delete-screen-schemes`
-Delete multiple screen schemes.
+Delete multiple screen schemes. Use `--unused` to delete schemes not linked to any issue type screen schemes.
 
 **Options:**
-- `-i, --ids <ids>`: Screen scheme IDs separated by comma (e.g., ID1,ID2,ID3) (required)
+- `-i, --ids <ids>`: Screen scheme IDs separated by comma (e.g., ID1,ID2,ID3)
+- `--unused`: Delete all screen schemes not linked to any issue type screen schemes
+- `--exec`: Execute deletion (without this option, only preview what would be deleted)
 - `-u, --url <url>`: Jira instance URL
 - `-e, --email <email>`: Jira user email
 - `-t, --token <token>`: Jira API token
 
-**Example:**
+**Note:** You must specify either `--ids` or `--unused`, but not both.
+
+**Examples:**
+
+Delete specific screen schemes:
 ```bash
 jira-cli delete-screen-schemes -i 601,602,603
+```
+
+Preview which unused screen schemes would be deleted:
+```bash
+jira-cli delete-screen-schemes --unused
+```
+
+Execute deletion of unused screen schemes:
+```bash
+jira-cli delete-screen-schemes --unused --exec
 ```
 
 #### `list-screens`
@@ -451,9 +492,10 @@ jira-cli delete-screens -i 701,702,703
 ### Cleanup Operations
 
 #### `cleanup`
-Clean up unused resources.
+Clean up unused resources. Use `--complete` for sequential cleanup of all resources.
 
 **Options:**
+- `--complete`: Complete sequential cleanup: archived projects, workflow schemes, workflows, issue type screen schemes, issue type schemes, screen schemes, screens
 - `--workflows`: Clean up inactive workflows without schemes
 - `--workflow-schemes`: Clean up inactive workflow schemes
 - `--wf-schemes`: Alias for `--workflow-schemes`
@@ -462,7 +504,7 @@ Clean up unused resources.
 - `-e, --email <email>`: Jira user email
 - `-t, --token <token>`: Jira API token
 
-**Note:** You must specify at least one of `--workflows` or `--workflow-schemes` (or `--wf-schemes`).
+**Note:** You must specify at least one of `--complete`, `--workflows`, or `--workflow-schemes` (or `--wf-schemes`).
 
 **Examples:**
 
@@ -484,6 +526,16 @@ jira-cli cleanup --workflows --exec
 Execute cleanup of both workflows and workflow schemes:
 ```bash
 jira-cli cleanup --workflows --workflow-schemes --exec
+```
+
+Preview complete sequential cleanup:
+```bash
+jira-cli cleanup --complete
+```
+
+Execute complete sequential cleanup:
+```bash
+jira-cli cleanup --complete --exec
 ```
 
 ## Advanced Usage
@@ -520,14 +572,29 @@ This is useful for:
 
 ### Email Logging Integration
 
-When email logging is configured, the following commands will send operation summaries:
-- `cleanup` (both preview and execution)
+When email logging is configured, operation summaries are sent for specific commands under certain conditions:
+
+**Commands that send emails:**
+- `cleanup` (only with `--exec` flag, preview mode does NOT send emails)
+- `cleanup --complete` (only with `--exec` flag)
+
+**Commands that do NOT send emails:**
 - `archive-projects`
 - `delete-projects`
-- `delete-workflows`
-- `delete-workflow-schemes`
+- `delete-workflows` (including `--unused` mode)
+- `delete-workflow-schemes` (including `--unused` mode)
+- All other commands
 
-Logs include:
+**Email triggering conditions:**
+- Emails are only sent during execution (when `--exec` flag is used)
+- Preview modes (without `--exec`) do NOT send emails
+- Emails include operation results, success/failure status, and error messages if any
+
+**Email format:**
+- Logs are sent as plain text with HTML `<pre>` tag formatting
+- **Note for Outlook users:** The `<pre>` tag ensures proper formatting but may require plain text viewing for optimal display
+
+**Log content includes:**
 - Timestamp of operation
 - Command executed
 - Success/failure status for each item
@@ -539,52 +606,3 @@ Logs include:
 - **Windows**: PowerShell, Command Prompt, or WSL
 - **Linux**: Any terminal with Bash/Zsh
 - **macOS**: Terminal with Bash/Zsh
-
-## Building Executables
-
-### Creating Standalone EXE/MSI Files
-
-The Jira CLI can be packaged as standalone executables for distribution.
-
-#### Prerequisites
-```bash
-# Install pkg (packaging tool)
-npm install --save-dev pkg
-```
-
-#### Build Commands
-```bash
-# Build Windows executable
-npm run build:win
-
-# Build Linux executable
-npm run build:linux
-
-# Build macOS executable
-npm run build:mac
-
-# Build all platforms
-npm run build:all
-
-# Clean build (removes config and builds fresh)
-npm run build:clean
-```
-
-#### Configuration Safety
-- Configuration is stored in `~/.jira-cli/config.json` (user home directory)
-- No credentials are embedded in executables
-- Users must run `set-config` command to configure their own credentials
-
-#### Creating MSI Installers
-1. Use **Inno Setup** (Windows) with provided template
-2. Or use **WiX Toolset** with `create-msi.js` script
-3. See `BUILD.md` for detailed instructions
-
-## Requirements
-
-- Node.js (version 14 or higher)
-- Jira API token (generate from your Jira account settings)
-
-## Building from Source
-
-For detailed build instructions, see [BUILD.md](BUILD.md).
