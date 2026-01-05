@@ -971,59 +971,12 @@ async function cleanupComplete(config, execute = false) {
     try {
         const jira = new JiraApi(config.url, config.email, config.token);
         
-        // 1. Unused projects (archived)
-        loader.text = execute ? 'Buscando e excluindo projetos não utilizados' : 'Buscando projetos não utilizados';
-        const unusedProjects = await jira.getUnusedProjects();
-        if (unusedProjects.length > 0) {
-            loader.stop();
-            console.log(`\n1. Projetos não utilizados (arquivados) encontrados: ${unusedProjects.length}`);
-            if (!execute) {
-                const Table = require('cli-table3');
-                const table = new Table({
-                    head: ['Key', 'Nome'],
-                    colWidths: [20, 60]
-                });
-                unusedProjects.forEach(project => {
-                    table.push([project.key || 'N/A', project.name || 'N/A']);
-                });
-                console.log(table.toString());
-                console.log('Para excluir, adicione a opção --exec');
-            } else {
-                console.log(`Serão excluídos ${unusedProjects.length} projetos.`);
-                const readline = require('readline');
-                const rl = readline.createInterface({
-                    input: process.stdin,
-                    output: process.stdout
-                });
-                const answer = await new Promise(resolve => {
-                    rl.question('Confirma a exclusão dos projetos? (Y/N): ', resolve);
-                });
-                rl.close();
-                if (answer.toUpperCase() !== 'Y') {
-                    console.log('Exclusão de projetos cancelada.');
-                } else {
-                    const projectKeys = unusedProjects.map(p => p.key);
-                    const results = await jira.deleteProjects(projectKeys);
-                    console.log(`Resultados da exclusão de projetos (${results.length}):`);
-                    results.forEach(result => {
-                        const message = result.success
-                            ? `✓ Projeto ${result.key} excluído com sucesso.`
-                            : `✗ Erro ao excluir projeto ${result.key}: ${result.error}`;
-                        console.log(message);
-                    });
-                }
-            }
-            loader.start();
-        } else {
-            console.log('\n1. Nenhum projeto não utilizado encontrado.');
-        }
-
-        // 2. Unused workflow schemes
+        // 1. Unused workflow schemes
         loader.text = execute ? 'Buscando e excluindo workflow schemes não utilizados' : 'Buscando workflow schemes não utilizados';
         const unusedWorkflowSchemes = await jira.getUnusedWorkflowSchemes();
         if (unusedWorkflowSchemes.length > 0) {
             loader.stop();
-            console.log(`\n2. Workflow schemes não utilizados encontrados: ${unusedWorkflowSchemes.length}`);
+            console.log(`\n1. Workflow schemes não utilizados encontrados: ${unusedWorkflowSchemes.length}`);
             if (!execute) {
                 const Table = require('cli-table3');
                 const table = new Table({
@@ -1062,15 +1015,15 @@ async function cleanupComplete(config, execute = false) {
             }
             loader.start();
         } else {
-            console.log('\n2. Nenhum workflow scheme não utilizado encontrado.');
+            console.log('\n1. Nenhum workflow scheme não utilizado encontrado.');
         }
 
-        // 3. Unused workflows (inactive without schemes)
+        // 2. Unused workflows (inactive without schemes)
         loader.text = execute ? 'Buscando e excluindo workflows não utilizados' : 'Buscando workflows não utilizados';
         const unusedWorkflows = await jira.getInactiveWorkflowsForCleanup();
         if (unusedWorkflows.length > 0) {
             loader.stop();
-            console.log(`\n3. Workflows inativos não utilizados encontrados: ${unusedWorkflows.length}`);
+            console.log(`\n2. Workflows inativos não utilizados encontrados: ${unusedWorkflows.length}`);
             if (!execute) {
                 const Table = require('cli-table3');
                 const table = new Table({
@@ -1109,15 +1062,15 @@ async function cleanupComplete(config, execute = false) {
             }
             loader.start();
         } else {
-            console.log('\n3. Nenhum workflow inativo não utilizado encontrado.');
+            console.log('\n2. Nenhum workflow inativo não utilizado encontrado.');
         }
 
-        // 4. Unused issue type screen schemes
+        // 3. Unused issue type screen schemes
         loader.text = execute ? 'Buscando e excluindo issue type screen schemes não utilizados' : 'Buscando issue type screen schemes não utilizados';
         const unusedIssueTypeScreenSchemes = await jira.getUnusedIssueTypeScreenSchemes();
         if (unusedIssueTypeScreenSchemes.length > 0) {
             loader.stop();
-            console.log(`\n4. Issue type screen schemes não utilizados encontrados: ${unusedIssueTypeScreenSchemes.length}`);
+            console.log(`\n3. Issue type screen schemes não utilizados encontrados: ${unusedIssueTypeScreenSchemes.length}`);
             if (!execute) {
                 const Table = require('cli-table3');
                 const table = new Table({
@@ -1156,15 +1109,15 @@ async function cleanupComplete(config, execute = false) {
             }
             loader.start();
         } else {
-            console.log('\n4. Nenhum issue type screen scheme não utilizado encontrado.');
+            console.log('\n3. Nenhum issue type screen scheme não utilizado encontrado.');
         }
 
-        // 5. Unused issue type schemes
+        // 4. Unused issue type schemes
         loader.text = execute ? 'Buscando e excluindo issue type schemes não utilizados' : 'Buscando issue type schemes não utilizados';
         const unusedIssueTypeSchemes = await jira.getUnusedIssueTypeSchemes();
         if (unusedIssueTypeSchemes.length > 0) {
             loader.stop();
-            console.log(`\n5. Issue type schemes não utilizados encontrados: ${unusedIssueTypeSchemes.length}`);
+            console.log(`\n4. Issue type schemes não utilizados encontrados: ${unusedIssueTypeSchemes.length}`);
             if (!execute) {
                 const Table = require('cli-table3');
                 const table = new Table({
@@ -1203,15 +1156,15 @@ async function cleanupComplete(config, execute = false) {
             }
             loader.start();
         } else {
-            console.log('\n5. Nenhum issue type scheme não utilizado encontrado.');
+            console.log('\n4. Nenhum issue type scheme não utilizado encontrado.');
         }
 
-        // 6. Unused screen schemes
+        // 5. Unused screen schemes
         loader.text = execute ? 'Buscando e excluindo screen schemes não utilizados' : 'Buscando screen schemes não utilizados';
         const unusedScreenSchemes = await jira.getUnusedScreenSchemes();
         if (unusedScreenSchemes.length > 0) {
             loader.stop();
-            console.log(`\n6. Screen schemes não utilizados encontrados: ${unusedScreenSchemes.length}`);
+            console.log(`\n5. Screen schemes não utilizados encontrados: ${unusedScreenSchemes.length}`);
             if (!execute) {
                 const Table = require('cli-table3');
                 const table = new Table({
@@ -1250,15 +1203,15 @@ async function cleanupComplete(config, execute = false) {
             }
             loader.start();
         } else {
-            console.log('\n6. Nenhum screen scheme não utilizado encontrado.');
+            console.log('\n5. Nenhum screen scheme não utilizado encontrado.');
         }
 
-        // 7. Unused screens
+        // 6. Unused screens
         loader.text = execute ? 'Buscando e excluindo screens não utilizados' : 'Buscando screens não utilizados';
         const unusedScreens = await jira.getUnusedScreens();
         if (unusedScreens.length > 0) {
             loader.stop();
-            console.log(`\n7. Screens não utilizados encontrados: ${unusedScreens.length}`);
+            console.log(`\n6. Screens não utilizados encontrados: ${unusedScreens.length}`);
             if (!execute) {
                 const Table = require('cli-table3');
                 const table = new Table({
@@ -1297,7 +1250,7 @@ async function cleanupComplete(config, execute = false) {
             }
             loader.start();
         } else {
-            console.log('\n7. Nenhum screen não utilizado encontrado.');
+            console.log('\n6. Nenhum screen não utilizado encontrado.');
         }
 
         loader.stop();

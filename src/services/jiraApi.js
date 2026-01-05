@@ -2,9 +2,32 @@ const axios = require('axios');
 
 class JiraApi {
     constructor(url, email, token) {
-        this.url = url;
+        // Normalize URL: ensure it has a protocol
+        this.url = this.normalizeUrl(url);
         this.auth = Buffer.from(`${email}:${token}`).toString('base64');
         this.timeout = 120000; // 120 seconds timeout
+    }
+
+    /**
+     * Normalize URL by ensuring it has a protocol (https://)
+     * @param {string} url - The URL to normalize
+     * @returns {string} Normalized URL with protocol
+     */
+    normalizeUrl(url) {
+        if (!url) {
+            return url;
+        }
+        
+        // Trim any whitespace
+        url = url.trim();
+        
+        // Check if URL already has a protocol
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+            return url;
+        }
+        
+        // Default to https:// for Jira Cloud
+        return `https://${url}`;
     }
 
     /**
@@ -452,33 +475,49 @@ class JiraApi {
     }
 
     async listIssueTypes(options = {}) {
-        let allIssueTypes = [];
-        let startAt = options.startAt || 0;
-        const maxResults = options.maxResults || 100;
-        let hasMore = true;
+        const params = {};
 
-        while (hasMore) {
-            const params = {
-                startAt: startAt,
-                maxResults: maxResults
-            };
+        // Add optional parameters if provided
+        if (options.id) params.id = options.id;
+        if (options.queryString) params.queryString = options.queryString;
+        if (options.orderBy) params.orderBy = options.orderBy;
+        if (options.expand) params.expand = options.expand;
 
-            // Add optional parameters if provided
-            if (options.id) params.id = options.id;
-            if (options.queryString) params.queryString = options.queryString;
-            if (options.orderBy) params.orderBy = options.orderBy;
-            if (options.expand) params.expand = options.expand;
-
-            const response = await axios.get(`${this.url}/rest/api/3/issuetype`, this.createAxiosConfig({
-                params: params
-            }));
+        const response = await axios.get(`${this.url}/rest/api/3/issuetype`, this.createAxiosConfig({
+            params: params
+        }));
+        
+        // The /rest/api/3/issuetype endpoint returns a plain array, not a paginated response
+        // Check if response.data is an array (non-paginated) or has values property (paginated)
+        if (Array.isArray(response.data)) {
+            return response.data;
+        } else if (response.data.values && Array.isArray(response.data.values)) {
+            // Handle paginated response (though unlikely for this endpoint)
+            let allIssueTypes = response.data.values;
+            let startAt = response.data.startAt + response.data.maxResults;
+            const total = response.data.total;
             
-            allIssueTypes = allIssueTypes.concat(response.data.values);
-            hasMore = !response.data.isLast;
-            startAt += maxResults;
+            while (startAt < total) {
+                const nextParams = { ...params, startAt: startAt, maxResults: response.data.maxResults };
+                const nextResponse = await axios.get(`${this.url}/rest/api/3/issuetype`, this.createAxiosConfig({
+                    params: nextParams
+                }));
+                
+                if (Array.isArray(nextResponse.data)) {
+                    allIssueTypes = allIssueTypes.concat(nextResponse.data);
+                    break;
+                } else if (nextResponse.data.values && Array.isArray(nextResponse.data.values)) {
+                    allIssueTypes = allIssueTypes.concat(nextResponse.data.values);
+                    startAt = nextResponse.data.startAt + nextResponse.data.maxResults;
+                } else {
+                    break;
+                }
+            }
+            return allIssueTypes;
         }
         
-        return allIssueTypes;
+        // Fallback: return empty array
+        return [];
     }
 
     async listScreenSchemes(options = {}) {
@@ -553,33 +592,52 @@ class JiraApi {
     }
 
     async listScreens(options = {}) {
-        let allScreens = [];
-        let startAt = options.startAt || 0;
-        const maxResults = options.maxResults || 100;
-        let hasMore = true;
+        const params = {
+            startAt: options.startAt || 0,
+            maxResults: options.maxResults || 100
+        };
 
-        while (hasMore) {
-            const params = {
-                startAt: startAt,
-                maxResults: maxResults
-            };
+        // Add optional parameters if provided
+        if (options.id) params.id = options.id;
+        if (options.queryString) params.queryString = options.queryString;
+        if (options.orderBy) params.orderBy = options.orderBy;
+        if (options.expand) params.expand = options.expand;
 
-            // Add optional parameters if provided
-            if (options.id) params.id = options.id;
-            if (options.queryString) params.queryString = options.queryString;
-            if (options.orderBy) params.orderBy = options.orderBy;
-            if (options.expand) params.expand = options.expand;
-
-            const response = await axios.get(`${this.url}/rest/api/3/screens`, this.createAxiosConfig({
-                params: params
-            }));
+        const response = await axios.get(`${this.url}/rest/api/3/screens`, this.createAxiosConfig({
+            params: params
+        }));
+        
+        // Handle both paginated and non-paginated responses
+        if (Array.isArray(response.data)) {
+            // Non-paginated response (plain array)
+            return response.data;
+        } else if (response.data.values && Array.isArray(response.data.values)) {
+            // Paginated response
+            let allScreens = response.data.values;
+            let startAt = response.data.startAt + response.data.maxResults;
+            const total = response.data.total;
             
-            allScreens = allScreens.concat(response.data.values);
-            hasMore = !response.data.isLast;
-            startAt += maxResults;
+            while (startAt < total) {
+                const nextParams = { ...params, startAt: startAt };
+                const nextResponse = await axios.get(`${this.url}/rest/api/3/screens`, this.createAxiosConfig({
+                    params: nextParams
+                }));
+                
+                if (Array.isArray(nextResponse.data)) {
+                    allScreens = allScreens.concat(nextResponse.data);
+                    break;
+                } else if (nextResponse.data.values && Array.isArray(nextResponse.data.values)) {
+                    allScreens = allScreens.concat(nextResponse.data.values);
+                    startAt = nextResponse.data.startAt + nextResponse.data.maxResults;
+                } else {
+                    break;
+                }
+            }
+            return allScreens;
         }
         
-        return allScreens;
+        // Fallback: return empty array
+        return [];
     }
 
     async getUnusedScreens() {
