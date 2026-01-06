@@ -168,8 +168,8 @@ Commands are grouped by purpose to help you find what you need quickly!
 Commands for managing Jira projects
 
 #### 🔍 `list-projects`
-**What it does**: Shows all active projects in your Jira instance  
-**When to use**: When you need to see what projects are available  
+**What it does**: Shows all active projects in your Jira instance
+**When to use**: When you need to see what projects are available
 **Example**:
 ```bash
 jira-cli list-projects
@@ -177,24 +177,31 @@ jira-cli list-projects -u https://test.atlassian.net
 ```
 
 #### 📦 `archive-project`
-**What it does**: Safely archives a single project  
-**When to use**: When a project is no longer active but you want to keep its data  
+**What it does**: Safely archives a single project
+**When to use**: When a project is no longer active but you want to keep its data
+**Options**:
+    **-k, --key <key>**: Project key (required)
 **Example**:
 ```bash
 jira-cli archive-project -k PROJ1
 ```
 
 #### 📦 `archive-projects`
-**What it does**: Archives multiple projects at once  
-**When to use**: Batch cleanup of inactive projects  
+**What it does**: Archives multiple projects at once
+**When to use**: Batch cleanup of inactive projects
+**Options**:
+    **-k, --keys <keys>**: Project keys separated by comma (e.g., PROJ1,PROJ2,PROJ3) (required)
 **Example**:
 ```bash
 jira-cli archive-projects -k PROJ1,PROJ2,PROJ3
 ```
 
 #### ✏️ `update-project-name`
-**What it does**: Changes a project's display name  
-**When to use**: When projects need rebranding or correction  
+**What it does**: Changes a project's display name
+**When to use**: When projects need rebranding or correction
+**Options**:
+    **-k, --key <key>**: Project key (required)
+    **-n, --name <name>**: New project name (required)
 **Example**:
 ```bash
 jira-cli update-project-name -k PROJ1 -n "New Project Name"
@@ -203,6 +210,9 @@ jira-cli update-project-name -k PROJ1 -n "New Project Name"
 #### 🗂️ `update-project-category`
 **What it does**: Updates a project's category
 **When to use**: When reorganizing projects into different categories
+**Options**:
+    **-k, --key <key>**: Project key (required)
+    **-c, --category <categoryId>**: Category ID (required)
 **Example**:
 ```bash
 jira-cli update-project-category -k PROJ1 -c 10010
@@ -219,6 +229,8 @@ jira-cli list-project-categories
 #### 🔍 `list-projects-by-category`
 **What it does**: Lists projects filtered by a specific category
 **When to use**: When you want to see all projects in a particular category
+**Options**:
+    **-c, --category <categoryId>**: Category ID (required)
 **Example**:
 ```bash
 jira-cli list-projects-by-category -c 10010
@@ -227,6 +239,9 @@ jira-cli list-projects-by-category -c 10010
 #### 🗂️ `update-projects-category`
 **What it does**: Updates category for multiple projects at once
 **When to use**: When moving multiple projects to a new category
+**Options**:
+    **-k, --keys <keys>**: Project keys separated by comma (e.g., PROJ1,PROJ2,PROJ3) (required)
+    **-c, --category <categoryId>**: Category ID (required)
 **Example**:
 ```bash
 jira-cli update-projects-category -k PROJ1,PROJ2,PROJ3 -c 10010
@@ -235,6 +250,8 @@ jira-cli update-projects-category -k PROJ1,PROJ2,PROJ3 -c 10010
 #### 🗑️ `delete-projects`
 **What it does**: Permanently deletes multiple projects
 **When to use**: **Use with caution!** Only for projects that truly need removal
+**Options**:
+    **-k, --keys <keys>**: Project keys separated by comma (e.g., PROJ1,PROJ2) (required)
 **Example**:
 ```bash
 jira-cli delete-projects -k PROJ1,PROJ2
@@ -244,16 +261,20 @@ jira-cli delete-projects -k PROJ1,PROJ2
 Commands for managing workflows and schemes
 
 #### 🔄 `list-workflow-schemes`
-**What it does**: Shows all workflow schemes  
-**When to use**: When auditing or cleaning up workflow configurations  
+**What it does**: Shows all workflow schemes
+**When to use**: When auditing or cleaning up workflow configurations
 **Example**:
 ```bash
 jira-cli list-workflow-schemes
 ```
 
 #### 🗑️ `delete-workflow-schemes`
-**What it does**: Removes unused workflow schemes  
-**When to use**: Cleaning up after project deletions or reorganizations  
+**What it does**: Removes unused workflow schemes
+**When to use**: Cleaning up after project deletions or reorganizations
+**Options**:
+    **-i, --ids <ids>**: Workflow scheme IDs separated by comma (e.g., ID1,ID2,ID3)
+    **--unused**: Delete all workflow schemes not linked to any projects
+    **--exec**: Execute deletion (without this option, only preview what would be deleted)
 **Example**:
 ```bash
 # Preview what would be deleted
@@ -264,8 +285,11 @@ jira-cli delete-workflow-schemes --unused --exec
 ```
 
 #### 🔄 `list-workflows`
-**What it does**: Lists workflows (active or inactive)  
-**When to use**: When reviewing workflow usage  
+**What it does**: Lists workflows (active or inactive)
+**When to use**: When reviewing workflow usage
+**Options**:
+    **--active**: List only active workflows
+    **--inactive**: List only inactive workflows
 **Example**:
 ```bash
 jira-cli list-workflows --active
@@ -273,8 +297,12 @@ jira-cli list-workflows --inactive
 ```
 
 #### 🗑️ `delete-workflows`
-**What it does**: Removes inactive workflows not linked to any schemes  
-**When to use**: Cleaning up orphaned workflows  
+**What it does**: Removes inactive workflows not linked to any schemes
+**When to use**: Cleaning up orphaned workflows
+**Options**:
+    **-i, --ids <ids>**: Workflow IDs separated by comma (e.g., ID1,ID2,ID3)
+    **--unused**: Delete all inactive workflows not linked to any schemes
+    **--exec**: Execute deletion (without this option, only preview what would be deleted)
 **Example**:
 ```bash
 # Preview deletions
@@ -288,32 +316,32 @@ jira-cli delete-workflows --unused --exec
 Commands for issue types, schemes, and screens
 
 #### 📋 `list-issue-type-screen-schemes`
-**What it does**: Shows issue type screen schemes  
-**When to use**: When configuring issue type displays  
+**What it does**: Shows issue type screen schemes
+**When to use**: When configuring issue type displays
 **Example**:
 ```bash
 jira-cli list-issue-type-screen-schemes
 ```
 
 #### 📋 `list-issue-type-schemes`
-**What it does**: Shows issue type schemes  
-**When to use**: When managing issue type configurations  
+**What it does**: Shows issue type schemes
+**When to use**: When managing issue type configurations
 **Example**:
 ```bash
 jira-cli list-issue-type-schemes
 ```
 
 #### 📋 `list-issue-types`
-**What it does**: Lists all issue types  
-**When to use**: When reviewing available issue types  
+**What it does**: Lists all issue types
+**When to use**: When reviewing available issue types
 **Example**:
 ```bash
 jira-cli list-issue-types
 ```
 
 #### 🖥️ `list-screen-schemes`
-**What it does**: Shows screen schemes  
-**When to use**: When managing screen configurations  
+**What it does**: Shows screen schemes
+**When to use**: When managing screen configurations
 **Example**:
 ```bash
 jira-cli list-screen-schemes
@@ -330,6 +358,10 @@ jira-cli list-screens
 #### 🗑️ `delete-issue-type-screen-schemes`
 **What it does**: Removes unused issue type screen schemes
 **When to use**: Cleaning up orphaned screen schemes
+**Options**:
+    **-i, --ids <ids>**: Issue type screen scheme IDs separated by comma (e.g., ID1,ID2,ID3)
+    **--unused**: Delete all issue type screen schemes not linked to any projects
+    **--exec**: Execute deletion (without this option, only preview what would be deleted)
 **Example**:
 ```bash
 # Preview what would be deleted
@@ -342,6 +374,10 @@ jira-cli delete-issue-type-screen-schemes --unused --exec
 #### 🗑️ `delete-issue-type-schemes`
 **What it does**: Removes unused issue type schemes
 **When to use**: Cleaning up orphaned issue type schemes
+**Options**:
+    **-i, --ids <ids>**: Issue type scheme IDs separated by comma (e.g., ID1,ID2,ID3)
+    **--unused**: Delete all issue type schemes not linked to any projects AND any issue types
+    **--exec**: Execute deletion (without this option, only preview what would be deleted)
 **Example**:
 ```bash
 # Preview what would be deleted
@@ -354,6 +390,8 @@ jira-cli delete-issue-type-schemes --unused --exec
 #### 🗑️ `delete-issue-types`
 **What it does**: Deletes specific issue types
 **When to use**: Removing custom issue types that are no longer needed
+**Options**:
+    **-i, --ids <ids>**: Issue type IDs separated by comma (e.g., ID1,ID2,ID3) (required)
 **Example**:
 ```bash
 jira-cli delete-issue-types -i 501,502,503
@@ -362,6 +400,10 @@ jira-cli delete-issue-types -i 501,502,503
 #### 🗑️ `delete-screen-schemes`
 **What it does**: Removes unused screen schemes
 **When to use**: Cleaning up orphaned screen schemes
+**Options**:
+    **-i, --ids <ids>**: Screen scheme IDs separated by comma (e.g., ID1,ID2,ID3)
+    **--unused**: Delete all screen schemes not linked to any issue type screen schemes
+    **--exec**: Execute deletion (without this option, only preview what would be deleted)
 **Example**:
 ```bash
 # Preview what would be deleted
@@ -374,6 +416,8 @@ jira-cli delete-screen-schemes --unused --exec
 #### 🗑️ `delete-screens`
 **What it does**: Deletes specific screens
 **When to use**: Removing screens that are no longer needed
+**Options**:
+    **-i, --ids <ids>**: Screen IDs separated by comma (e.g., ID1,ID2,ID3) (required)
 **Example**:
 ```bash
 jira-cli delete-screens -i 701,702,703
@@ -385,6 +429,13 @@ Commands for setting up and managing your Jira CLI configuration
 #### ⚙️ `set-config`
 **What it does**: Sets your Jira credentials and configuration
 **When to use**: First-time setup or when changing Jira instances
+**Options**:
+    **-u, --url <url>**: Jira instance URL (e.g., https://yourcompany.atlassian.net) (required)
+    **-e, --email <email>**: Jira user email (required)
+    **-t, --token <token>**: Jira API token (required)
+    **-l, --log-email <email>**: Email to receive operation logs (optional)
+    **--smtp-user <user>**: SMTP email for sending (e.g., your-email@gmail.com) (optional)
+    **--smtp-pass <pass>**: App password for SMTP email (optional)
 **Example**:
 ```bash
 jira-cli set-config -u https://yourcompany.atlassian.net -e your-email@example.com -t your-api-token
@@ -400,8 +451,12 @@ jira-cli set-config -u https://yourcompany.atlassian.net -e your-email@example.c
 Commands for email configuration and operation logs
 
 #### 📧 `set-email-logs`
-**What it does**: Configures email for operation logs  
-**When to use**: When you want email notifications for important operations  
+**What it does**: Configures email for operation logs
+**When to use**: When you want email notifications for important operations
+**Options**:
+    **-l, --log-email <email>**: Email to receive operation logs (required)
+    **--smtp-user <user>**: SMTP email for sending (e.g., your-email@gmail.com) (required)
+    **--smtp-pass <pass>**: App password for SMTP email (required)
 **Example**:
 ```bash
 jira-cli set-email-logs -l logs@example.com --smtp-user smtp-user@example.com --smtp-pass your-smtp-password
@@ -411,8 +466,14 @@ jira-cli set-email-logs -l logs@example.com --smtp-user smtp-user@example.com --
 Powerful tools for complex operations
 
 #### 🧹 `cleanup`
-**What it does**: Comprehensive cleanup of unused resources  
-**When to use**: Periodic maintenance or before major reorganizations  
+**What it does**: Comprehensive cleanup of unused resources
+**When to use**: Periodic maintenance or before major reorganizations
+**Options**:
+    **--complete**: Complete sequential cleanup: archived projects, workflow schemes, workflows, issue type screen schemes, issue type schemes, screen schemes, screens
+    **--workflows**: Clean inactive workflows without schemes
+    **--workflow-schemes**: Clean inactive workflow schemes
+    **--wf-schemes**: Alias for --workflow-schemes
+    **--exec**: Execute cleanup (without this option only lists items)
 **Example**:
 ```bash
 # Preview complete cleanup
