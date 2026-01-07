@@ -1,0 +1,31 @@
+{
+    "name": "jira-cli",
+    "version": "1.0.0",
+    "description": "CLI tool to interact with Jira API v3",
+    "license": "MIT",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js",
+        "build": "rm -f config.json && rm -rf dist && pkg . --targets node18-win-x64 --output dist/jira-cli.exe --no-bytecode --public --options max_old_space_size=4096"
+    },
+    "dependencies": {
+        "axios": "0.27.2",
+        "cli-table3": "^0.6.5",
+        "commander": "^11.1.0",
+        "nodemailer": "^7.0.11"
+    },
+    "devDependencies": {
+        "pkg": "^5.8.1"
+    },
+    "bin": {
+        "jira-cli": "./index.js"
+    },
+    "pkg": {
+        "scripts": [
+            "src/**/*.js"
+        ],
+        "assets": [
+            "node_modules/axios/dist/**/*"
+        ]
+    }
+}
