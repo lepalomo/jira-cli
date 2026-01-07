@@ -919,16 +919,23 @@ async function deleteScreenSchemes(config, schemeIds, options = {}) {
     }
 }
 
-async function listScreens(config) {
+async function listScreens(config, screenSchemeId) {
     const Loader = require('../utils/loader');
-    const loader = new Loader('Buscando screens');
+    const loader = new Loader(screenSchemeId ? `Buscando screens do screen scheme ${screenSchemeId}` : 'Buscando screens');
     loader.start();
 
     try {
         const jira = new JiraApi(config.url, config.email, config.token);
-        const screens = await jira.listScreens();
+        const screens = screenSchemeId
+            ? await jira.getScreensByScreenScheme(screenSchemeId)
+            : await jira.listScreens();
 
         loader.stop();
+
+        if (screens.length === 0) {
+            console.log(screenSchemeId ? `Nenhum screen encontrado no screen scheme ${screenSchemeId}.` : 'Nenhum screen encontrado.');
+            return;
+        }
 
         // Ordenar por nome alfabeticamente
         const sortedScreens = screens.sort((a, b) => {
@@ -954,6 +961,447 @@ async function deleteScreens(config, screenIds) {
             console.log(`✗ Erro ao excluir screen ${result.id}: ${result.error}`);
         }
     });
+}
+
+async function listFields(config, options = {}) {
+    const Loader = require('../utils/loader');
+    const loader = new Loader('Buscando campos');
+    loader.start();
+
+    try {
+        const jira = new JiraApi(config.url, config.email, config.token);
+        
+        // Prepare search parameters
+        const searchParams = {};
+        
+        // Map options to API parameters
+        if (options.startAt !== undefined) searchParams.startAt = options.startAt;
+        if (options.maxResults !== undefined) searchParams.maxResults = options.maxResults;
+        if (options.type) searchParams.type = options.type;
+        if (options.id) searchParams.id = options.id;
+        if (options.query) searchParams.query = options.query;
+        if (options.orderBy) searchParams.orderBy = options.orderBy;
+        if (options.expand) searchParams.expand = options.expand;
+        if (options.projectIds) searchParams.projectIds = options.projectIds;
+
+        // Always expand screensCount, contextsCount, and lastUsed to get usage information
+        if (!searchParams.expand) {
+            searchParams.expand = 'screensCount,contextsCount,lastUsed';
+        } else {
+            // Add missing expand parameters
+            const expandParams = searchParams.expand.split(',');
+            if (!expandParams.includes('screensCount')) {
+                expandParams.push('screensCount');
+            }
+            if (!expandParams.includes('contextsCount')) {
+                expandParams.push('contextsCount');
+            }
+            if (!expandParams.includes('lastUsed')) {
+                expandParams.push('lastUsed');
+            }
+            searchParams.expand = expandParams.join(',');
+        }
+
+        const fields = await jira.searchFields(searchParams);
+        loader.stop();
+
+        if (fields.length === 0) {
+            console.log('Nenhum campo encontrado com os filtros especificados.');
+            return;
+        }
+
+        // Sort by name alphabetically
+        const sortedFields = fields.sort((a, b) => {
+            return (a.name || '').localeCompare(b.name || '');
+        });
+
+        const { createFieldsTable } = require('../utils/table');
+        console.log(createFieldsTable(sortedFields));
+        
+        // Show pagination info if applicable
+        if (options.startAt !== undefined || options.maxResults !== undefined) {
+            console.log(`\nTotal de campos: ${fields.length}`);
+            if (options.startAt !== undefined) {
+                console.log(`Início: ${options.startAt}`);
+            }
+        }
+    } catch (error) {
+        loader.stop();
+        throw error;
+    }
+}
+
+async function getIssue(config, issueIdOrKey, options = {}) {
+    const Loader = require('../utils/loader');
+    const loader = new Loader(`Buscando issue ${issueIdOrKey}`);
+    loader.start();
+
+    try {
+        const jira = new JiraApi(config.url, config.email, config.token);
+        
+        // Prepare API options
+        const apiOptions = {};
+        if (options.fields) apiOptions.fields = options.fields;
+        if (options.expand) apiOptions.expand = options.expand;
+        if (options.properties) apiOptions.properties = options.properties;
+        
+        const issue = await jira.getIssue(issueIdOrKey, apiOptions);
+        loader.stop();
+
+        const { createIssueDetailTable } = require('../utils/table');
+        console.log(createIssueDetailTable(issue));
+        
+        return issue;
+    } catch (error) {
+        loader.stop();
+        throw error;
+    }
+}
+
+async function searchIssues(config, jql, options = {}) {
+    const Loader = require('../utils/loader');
+    const loader = new Loader(`Buscando issues com JQL: ${jql.substring(0, 50)}${jql.length > 50 ? '...' : ''}`);
+    loader.start();
+
+    try {
+        const jira = new JiraApi(config.url, config.email, config.token);
+        
+        // Prepare API options
+        const apiOptions = {
+            startAt: options.startAt || 0,
+            maxResults: options.maxResults || 50
+        };
+        if (options.fields) apiOptions.fields = options.fields;
+        if (options.expand) apiOptions.expand = options.expand;
+        if (options.validateQuery !== undefined) apiOptions.validateQuery = options.validateQuery;
+        
+        const searchResults = await jira.searchIssues(jql, apiOptions);
+        loader.stop();
+
+        console.log(`Total de issues encontradas: ${searchResults.total}`);
+        console.log(`Mostrando ${searchResults.issues?.length || 0} issues (início: ${searchResults.startAt || 0})`);
+        
+        if (searchResults.issues && searchResults.issues.length > 0) {
+            const { createIssuesTable } = require('../utils/table');
+            console.log(createIssuesTable(searchResults.issues));
+        }
+        
+        return searchResults;
+    } catch (error) {
+        loader.stop();
+        throw error;
+    }
+}
+
+async function getIssuesBatch(config, issueIdsOrKeys, options = {}) {
+    const Loader = require('../utils/loader');
+    const loader = new Loader(`Buscando ${issueIdsOrKeys.length} issues`);
+    loader.start();
+
+    try {
+        const jira = new JiraApi(config.url, config.email, config.token);
+        
+        // Prepare API options
+        const apiOptions = {};
+        if (options.fields) apiOptions.fields = options.fields;
+        if (options.expand) apiOptions.expand = options.expand;
+        
+        const results = await jira.getIssuesBatch(issueIdsOrKeys, apiOptions);
+        loader.stop();
+
+        // Count successes and failures
+        const successCount = results.filter(r => r.success).length;
+        const failureCount = results.filter(r => !r.success).length;
+        
+        console.log(`Resultados: ${successCount} sucessos, ${failureCount} falhas`);
+        
+        // Display successful issues in a table
+        const successfulIssues = results.filter(r => r.success).map(r => r.data);
+        if (successfulIssues.length > 0) {
+            const { createIssuesTable } = require('../utils/table');
+            console.log('\nIssues encontradas:');
+            console.log(createIssuesTable(successfulIssues));
+        }
+        
+        // Display failures
+        if (failureCount > 0) {
+            console.log('\nFalhas:');
+            results.filter(r => !r.success).forEach(result => {
+                console.log(`✗ ${result.issueIdOrKey}: ${result.error}`);
+            });
+        }
+        
+        return results;
+    } catch (error) {
+        loader.stop();
+        throw error;
+    }
+}
+
+async function setIssueFieldValue(config, issueIdOrKey, fieldId, value, options = {}) {
+    const Loader = require('../utils/loader');
+    const loader = new Loader(`Atualizando campo ${fieldId} na issue ${issueIdOrKey}`);
+    loader.start();
+
+    try {
+        const jira = new JiraApi(config.url, config.email, config.token);
+        
+        // Check if dry-run mode
+        if (options.dryRun) {
+            loader.stop();
+            console.log(`[DRY-RUN] Campo ${fieldId} seria atualizado na issue ${issueIdOrKey} com valor: ${value}`);
+            console.log(`[DRY-RUN] Para executar a atualização, remova a opção --dry-run`);
+            return { dryRun: true, issueIdOrKey, fieldId, value };
+        }
+        
+        // Check if confirmation is required
+        if (options.confirm) {
+            loader.stop();
+            const readline = require('readline');
+            const rl = readline.createInterface({
+                input: process.stdin,
+                output: process.stdout
+            });
+            
+            const answer = await new Promise(resolve => {
+                rl.question(`Confirma a atualização do campo ${fieldId} na issue ${issueIdOrKey} com valor "${value}"? (Y/N): `, resolve);
+            });
+            rl.close();
+            
+            if (answer.toUpperCase() !== 'Y') {
+                console.log('Operação cancelada.');
+                return { cancelled: true, issueIdOrKey, fieldId, value };
+            }
+            
+            loader.start();
+        }
+        
+        const result = await jira.updateIssueField(issueIdOrKey, fieldId, value);
+        loader.stop();
+        
+        console.log(`✓ Campo ${fieldId} atualizado com sucesso na issue ${issueIdOrKey}`);
+        return result;
+    } catch (error) {
+        loader.stop();
+        throw error;
+    }
+}
+
+async function setIssueFieldValueBatch(config, issueIdsOrKeys, fieldId, value, options = {}) {
+    const Loader = require('../utils/loader');
+    const loader = new Loader(`Atualizando campo ${fieldId} em ${issueIdsOrKeys.length} issues`);
+    loader.start();
+
+    try {
+        const jira = new JiraApi(config.url, config.email, config.token);
+        
+        // Check if dry-run mode
+        if (options.dryRun) {
+            loader.stop();
+            console.log(`[DRY-RUN] Campo ${fieldId} seria atualizado em ${issueIdsOrKeys.length} issues com valor: ${value}`);
+            console.log(`[DRY-RUN] Issues: ${issueIdsOrKeys.join(', ')}`);
+            console.log(`[DRY-RUN] Para executar a atualização, remova a opção --dry-run`);
+            return { dryRun: true, count: issueIdsOrKeys.length, fieldId, value };
+        }
+        
+        // Check if confirmation is required
+        if (options.confirm) {
+            loader.stop();
+            const readline = require('readline');
+            const rl = readline.createInterface({
+                input: process.stdin,
+                output: process.stdout
+            });
+            
+            const answer = await new Promise(resolve => {
+                rl.question(`Confirma a atualização do campo ${fieldId} em ${issueIdsOrKeys.length} issues com valor "${value}"? (Y/N): `, resolve);
+            });
+            rl.close();
+            
+            if (answer.toUpperCase() !== 'Y') {
+                console.log('Operação cancelada.');
+                return { cancelled: true, count: issueIdsOrKeys.length, fieldId, value };
+            }
+            
+            loader.start();
+        }
+        
+        const results = await jira.updateIssueFieldsBatch(issueIdsOrKeys, fieldId, value);
+        loader.stop();
+        
+        // Count successes and failures
+        const successCount = results.filter(r => r.success).length;
+        const failureCount = results.filter(r => !r.success).length;
+        
+        console.log(`Resultados: ${successCount} sucessos, ${failureCount} falhas`);
+        
+        // Display successes
+        if (successCount > 0) {
+            console.log('\nSucessos:');
+            results.filter(r => r.success).forEach(result => {
+                console.log(`✓ ${result.issueIdOrKey}: Campo ${fieldId} atualizado`);
+            });
+        }
+        
+        // Display failures
+        if (failureCount > 0) {
+            console.log('\nFalhas:');
+            results.filter(r => !r.success).forEach(result => {
+                console.log(`✗ ${result.issueIdOrKey}: ${result.error}`);
+            });
+        }
+        
+        return results;
+    } catch (error) {
+        loader.stop();
+        throw error;
+    }
+}
+
+async function copyItemFieldsValues(config, sourceIssueIdOrKey, sourceFieldId, targetFieldId, options = {}) {
+    const Loader = require('../utils/loader');
+    const loader = new Loader(`Copiando valor do campo ${sourceFieldId} para ${targetFieldId} na issue ${sourceIssueIdOrKey}`);
+    loader.start();
+
+    try {
+        const jira = new JiraApi(config.url, config.email, config.token);
+        
+        // Check if dry-run mode
+        if (options.dryRun) {
+            loader.stop();
+            console.log(`[DRY-RUN] Valor do campo ${sourceFieldId} seria copiado para ${targetFieldId} na issue ${sourceIssueIdOrKey}`);
+            if (options.append) {
+                console.log(`[DRY-RUN] Modo: append (adicionar ao valor existente)`);
+                if (options.separator) {
+                    console.log(`[DRY-RUN] Separador: "${options.separator}"`);
+                }
+            } else {
+                console.log(`[DRY-RUN] Modo: replace (substituir valor existente)`);
+            }
+            console.log(`[DRY-RUN] Para executar a cópia, remova a opção --dry-run`);
+            return { dryRun: true, sourceIssueIdOrKey, sourceFieldId, targetFieldId, options };
+        }
+        
+        // Check if confirmation is required
+        if (options.confirm) {
+            loader.stop();
+            const readline = require('readline');
+            const rl = readline.createInterface({
+                input: process.stdin,
+                output: process.stdout
+            });
+            
+            const mode = options.append ? 'append' : 'replace';
+            const answer = await new Promise(resolve => {
+                rl.question(`Confirma a cópia do campo ${sourceFieldId} para ${targetFieldId} na issue ${sourceIssueIdOrKey} (modo: ${mode})? (Y/N): `, resolve);
+            });
+            rl.close();
+            
+            if (answer.toUpperCase() !== 'Y') {
+                console.log('Operação cancelada.');
+                return { cancelled: true, sourceIssueIdOrKey, sourceFieldId, targetFieldId, options };
+            }
+            
+            loader.start();
+        }
+        
+        const copyOptions = {};
+        if (options.append) copyOptions.append = true;
+        if (options.separator) copyOptions.separator = options.separator;
+        
+        const result = await jira.copyFieldValue(sourceIssueIdOrKey, sourceFieldId, targetFieldId, copyOptions);
+        loader.stop();
+        
+        console.log(`✓ Valor copiado do campo ${sourceFieldId} para ${targetFieldId} na issue ${sourceIssueIdOrKey}`);
+        return result;
+    } catch (error) {
+        loader.stop();
+        throw error;
+    }
+}
+
+async function copyItemFieldsValuesBatch(config, issueIdsOrKeys, sourceFieldId, targetFieldId, options = {}) {
+    const Loader = require('../utils/loader');
+    const loader = new Loader(`Copiando valor do campo ${sourceFieldId} para ${targetFieldId} em ${issueIdsOrKeys.length} issues`);
+    loader.start();
+
+    try {
+        const jira = new JiraApi(config.url, config.email, config.token);
+        
+        // Check if dry-run mode
+        if (options.dryRun) {
+            loader.stop();
+            console.log(`[DRY-RUN] Valor do campo ${sourceFieldId} seria copiado para ${targetFieldId} em ${issueIdsOrKeys.length} issues`);
+            if (options.append) {
+                console.log(`[DRY-RUN] Modo: append (adicionar ao valor existente)`);
+                if (options.separator) {
+                    console.log(`[DRY-RUN] Separador: "${options.separator}"`);
+                }
+            } else {
+                console.log(`[DRY-RUN] Modo: replace (substituir valor existente)`);
+            }
+            console.log(`[DRY-RUN] Issues: ${issueIdsOrKeys.join(', ')}`);
+            console.log(`[DRY-RUN] Para executar a cópia, remova a opção --dry-run`);
+            return { dryRun: true, count: issueIdsOrKeys.length, sourceFieldId, targetFieldId, options };
+        }
+        
+        // Check if confirmation is required
+        if (options.confirm) {
+            loader.stop();
+            const readline = require('readline');
+            const rl = readline.createInterface({
+                input: process.stdin,
+                output: process.stdout
+            });
+            
+            const mode = options.append ? 'append' : 'replace';
+            const answer = await new Promise(resolve => {
+                rl.question(`Confirma a cópia do campo ${sourceFieldId} para ${targetFieldId} em ${issueIdsOrKeys.length} issues (modo: ${mode})? (Y/N): `, resolve);
+            });
+            rl.close();
+            
+            if (answer.toUpperCase() !== 'Y') {
+                console.log('Operação cancelada.');
+                return { cancelled: true, count: issueIdsOrKeys.length, sourceFieldId, targetFieldId, options };
+            }
+            
+            loader.start();
+        }
+        
+        const copyOptions = {};
+        if (options.append) copyOptions.append = true;
+        if (options.separator) copyOptions.separator = options.separator;
+        
+        const results = await jira.copyFieldValuesBatch(issueIdsOrKeys, sourceFieldId, targetFieldId, copyOptions);
+        loader.stop();
+        
+        // Count successes and failures
+        const successCount = results.filter(r => r.success).length;
+        const failureCount = results.filter(r => !r.success).length;
+        
+        console.log(`Resultados: ${successCount} sucessos, ${failureCount} falhas`);
+        
+        // Display successes
+        if (successCount > 0) {
+            console.log('\nSucessos:');
+            results.filter(r => r.success).forEach(result => {
+                console.log(`✓ ${result.issueIdOrKey}: Campo ${sourceFieldId} copiado para ${targetFieldId}`);
+            });
+        }
+        
+        // Display failures
+        if (failureCount > 0) {
+            console.log('\nFalhas:');
+            results.filter(r => !r.success).forEach(result => {
+                console.log(`✗ ${result.issueIdOrKey}: ${result.error}`);
+            });
+        }
+        
+        return results;
+    } catch (error) {
+        loader.stop();
+        throw error;
+    }
 }
 
 async function cleanupComplete(config, execute = false) {
@@ -1294,7 +1742,15 @@ const commands = {
     listScreenSchemes,
     deleteScreenSchemes,
     listScreens,
-    deleteScreens
+    deleteScreens,
+    listFields,
+    getIssue,
+    searchIssues,
+    getIssuesBatch,
+    setIssueFieldValue,
+    setIssueFieldValueBatch,
+    copyItemFieldsValues,
+    copyItemFieldsValuesBatch
 };
 
 // Apply 120-second timeout to all command functions

@@ -2,7 +2,15 @@
 
 const { Command } = require('commander');
 const { loadConfig, saveConfig } = require('./src/commands/config');
-const { listProjects, listCategories, archiveProject, archiveProjects, updateProjectName, updateProjectCategory, updateProjectsCategory, listProjectsByCategory, deleteProjects, listWorkflows, deleteWorkflows, deleteWorkflowSchemes, listWorkflowSchemes, cleanupWorkflows, cleanupWorkflowSchemes, cleanupComplete, listIssueTypeScreenSchemes, deleteIssueTypeScreenSchemes, listIssueTypeSchemes, deleteIssueTypeSchemes, listIssueTypes, deleteIssueTypes, listScreenSchemes, deleteScreenSchemes, listScreens, deleteScreens } = require('./src/commands/commands');
+const {
+    listProjects, listCategories, archiveProject, archiveProjects, updateProjectName, updateProjectCategory,
+    updateProjectsCategory, listProjectsByCategory, deleteProjects, listWorkflows, deleteWorkflows,
+    deleteWorkflowSchemes, listWorkflowSchemes, cleanupWorkflows, cleanupWorkflowSchemes, cleanupComplete,
+    listIssueTypeScreenSchemes, deleteIssueTypeScreenSchemes, listIssueTypeSchemes, deleteIssueTypeSchemes,
+    listIssueTypes, deleteIssueTypes, listScreenSchemes, deleteScreenSchemes, listScreens, deleteScreens,
+    listFields, getIssue, searchIssues, getIssuesBatch, setIssueFieldValue, setIssueFieldValueBatch,
+    copyItemFieldsValues, copyItemFieldsValuesBatch
+} = require('./src/commands/commands');
 
 const program = new Command();
 
@@ -538,6 +546,7 @@ program.command('delete-screen-schemes')
 
 program.command('list-screens')
     .description('List screens')
+    .option('-s, --screen-scheme-id <id>', 'Filter screens by screen scheme ID')
     .option('-u, --url <url>', 'Jira instance URL')
     .option('-e, --email <email>', 'Jira user email')
     .option('-t, --token <token>', 'Jira API token')
@@ -548,7 +557,7 @@ program.command('list-screens')
             return;
         }
         try {
-            await listScreens(config);
+            await listScreens(config, options.screenSchemeId);
         } catch (error) {
             console.error('Error fetching screens:', error.response ? error.response.data : error.message);
         }
@@ -571,6 +580,44 @@ program.command('delete-screens')
             await deleteScreens(config, screenIds);
         } catch (error) {
             console.error('Error deleting screens:', error.response ? error.response.data : error.message);
+        }
+    });
+
+program.command('list-fields')
+    .description('List fields with pagination and filtering')
+    .option('--start-at <startAt>', 'Page offset (default: 0)', '0')
+    .option('--max-results <maxResults>', 'Items per page (default: 50)', '50')
+    .option('--type <type>', 'Field types to search (custom, system) - comma separated')
+    .option('--id <id>', 'IDs of custom fields to return or filter - comma separated')
+    .option('--query <query>', 'Case-insensitive partial match with field names or descriptions')
+    .option('--order-by <orderBy>', 'Order results by: contextsCount, lastUsed, name, screensCount (with +/- prefixes)')
+    .option('--expand <expand>', 'Expand parameter')
+    .option('--project-ids <projectIds>', 'Project IDs to filter - comma separated')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        
+        // Parse array parameters
+        const parsedOptions = {};
+        if (options.startAt !== undefined) parsedOptions.startAt = parseInt(options.startAt);
+        if (options.maxResults !== undefined) parsedOptions.maxResults = parseInt(options.maxResults);
+        if (options.type) parsedOptions.type = options.type;
+        if (options.id) parsedOptions.id = options.id;
+        if (options.query) parsedOptions.query = options.query;
+        if (options.orderBy) parsedOptions.orderBy = options.orderBy;
+        if (options.expand) parsedOptions.expand = options.expand;
+        if (options.projectIds) parsedOptions.projectIds = options.projectIds;
+        
+        try {
+            await listFields(config, parsedOptions);
+        } catch (error) {
+            console.error('Error fetching fields:', error.response ? error.response.data : error.message);
         }
     });
 
@@ -617,6 +664,210 @@ program.command('cleanup')
             }
         } catch (error) {
             console.error('Error during cleanup:', error.response ? error.response.data : error.message);
+        }
+    });
+
+// New issue commands
+program.command('get-issue')
+    .description('Get issue details by ID or key')
+    .requiredOption('-i, --issue <issueIdOrKey>', 'Issue ID or key (e.g., PROJ-123 or 10001)')
+    .option('--fields <fields>', 'Comma-separated list of fields to include')
+    .option('--expand <expand>', 'Comma-separated list of expansions')
+    .option('--properties <properties>', 'Comma-separated list of properties to include')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        try {
+            const apiOptions = {};
+            if (options.fields) apiOptions.fields = options.fields;
+            if (options.expand) apiOptions.expand = options.expand;
+            if (options.properties) apiOptions.properties = options.properties;
+            
+            await getIssue(config, options.issue, apiOptions);
+        } catch (error) {
+            console.error('Error fetching issue:', error.response ? error.response.data : error.message);
+        }
+    });
+
+program.command('search-issues')
+    .description('Search issues using JQL')
+    .requiredOption('-j, --jql <jql>', 'JQL query string')
+    .option('--fields <fields>', 'Comma-separated list of fields to include')
+    .option('--expand <expand>', 'Comma-separated list of expansions')
+    .option('--start-at <startAt>', 'Starting index for pagination (default: 0)', '0')
+    .option('--max-results <maxResults>', 'Maximum number of results to return (default: 50)', '50')
+    .option('--validate-query', 'Whether to validate the JQL query')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        try {
+            const apiOptions = {
+                startAt: parseInt(options.startAt),
+                maxResults: parseInt(options.maxResults)
+            };
+            if (options.fields) apiOptions.fields = options.fields;
+            if (options.expand) apiOptions.expand = options.expand;
+            if (options.validateQuery !== undefined) apiOptions.validateQuery = options.validateQuery;
+            
+            await searchIssues(config, options.jql, apiOptions);
+        } catch (error) {
+            console.error('Error searching issues:', error.response ? error.response.data : error.message);
+        }
+    });
+
+program.command('get-issues-batch')
+    .description('Get multiple issues in batch')
+    .requiredOption('-i, --issues <issues>', 'Issue IDs or keys separated by comma (e.g., PROJ-123,PROJ-124,10001)')
+    .option('--fields <fields>', 'Comma-separated list of fields to include')
+    .option('--expand <expand>', 'Comma-separated list of expansions')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        try {
+            const issueIdsOrKeys = options.issues.split(',').map(id => id.trim());
+            const apiOptions = {};
+            if (options.fields) apiOptions.fields = options.fields;
+            if (options.expand) apiOptions.expand = options.expand;
+            
+            await getIssuesBatch(config, issueIdsOrKeys, apiOptions);
+        } catch (error) {
+            console.error('Error fetching issues batch:', error.response ? error.response.data : error.message);
+        }
+    });
+
+program.command('set-issue-field-value')
+    .description('Set field value on an issue')
+    .requiredOption('-i, --issue <issueIdOrKey>', 'Issue ID or key')
+    .requiredOption('-f, --field <fieldId>', 'Field ID (e.g., summary, description, customfield_10001)')
+    .requiredOption('-v, --value <value>', 'New value for the field')
+    .option('--dry-run', 'Preview the change without executing')
+    .option('--confirm', 'Ask for confirmation before executing')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        try {
+            const apiOptions = {};
+            if (options.dryRun) apiOptions.dryRun = true;
+            if (options.confirm) apiOptions.confirm = true;
+            
+            await setIssueFieldValue(config, options.issue, options.field, options.value, apiOptions);
+        } catch (error) {
+            console.error('Error setting field value:', error.response ? error.response.data : error.message);
+        }
+    });
+
+program.command('set-issue-field-value-batch')
+    .description('Set field value on multiple issues')
+    .requiredOption('-i, --issues <issues>', 'Issue IDs or keys separated by comma')
+    .requiredOption('-f, --field <fieldId>', 'Field ID to update')
+    .requiredOption('-v, --value <value>', 'New value for the field')
+    .option('--dry-run', 'Preview the change without executing')
+    .option('--confirm', 'Ask for confirmation before executing')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        try {
+            const issueIdsOrKeys = options.issues.split(',').map(id => id.trim());
+            const apiOptions = {};
+            if (options.dryRun) apiOptions.dryRun = true;
+            if (options.confirm) apiOptions.confirm = true;
+            
+            await setIssueFieldValueBatch(config, issueIdsOrKeys, options.field, options.value, apiOptions);
+        } catch (error) {
+            console.error('Error setting field values batch:', error.response ? error.response.data : error.message);
+        }
+    });
+
+program.command('copy-item-fields-values')
+    .description('Copy field value from one field to another within the same issue')
+    .requiredOption('-i, --issue <issueIdOrKey>', 'Issue ID or key')
+    .requiredOption('-s, --source-field <sourceFieldId>', 'Source field ID')
+    .requiredOption('-t, --target-field <targetFieldId>', 'Target field ID')
+    .option('--append', 'Append to existing value instead of replacing')
+    .option('--separator <separator>', 'Separator to use when appending (default: "\\n\\n")')
+    .option('--dry-run', 'Preview the change without executing')
+    .option('--confirm', 'Ask for confirmation before executing')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        try {
+            const apiOptions = {};
+            if (options.append) apiOptions.append = true;
+            if (options.separator) apiOptions.separator = options.separator;
+            if (options.dryRun) apiOptions.dryRun = true;
+            if (options.confirm) apiOptions.confirm = true;
+            
+            await copyItemFieldsValues(config, options.issue, options.sourceField, options.targetField, apiOptions);
+        } catch (error) {
+            console.error('Error copying field values:', error.response ? error.response.data : error.message);
+        }
+    });
+
+program.command('copy-item-fields-values-batch')
+    .description('Copy field values for multiple issues')
+    .requiredOption('-i, --issues <issues>', 'Issue IDs or keys separated by comma')
+    .requiredOption('-s, --source-field <sourceFieldId>', 'Source field ID')
+    .requiredOption('-t, --target-field <targetFieldId>', 'Target field ID')
+    .option('--append', 'Append to existing value instead of replacing')
+    .option('--separator <separator>', 'Separator to use when appending (default: "\\n\\n")')
+    .option('--dry-run', 'Preview the change without executing')
+    .option('--confirm', 'Ask for confirmation before executing')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        try {
+            const issueIdsOrKeys = options.issues.split(',').map(id => id.trim());
+            const apiOptions = {};
+            if (options.append) apiOptions.append = true;
+            if (options.separator) apiOptions.separator = options.separator;
+            if (options.dryRun) apiOptions.dryRun = true;
+            if (options.confirm) apiOptions.confirm = true;
+            
+            await copyItemFieldsValuesBatch(config, issueIdsOrKeys, options.sourceField, options.targetField, apiOptions);
+        } catch (error) {
+            console.error('Error copying field values batch:', error.response ? error.response.data : error.message);
         }
     });
 

@@ -640,6 +640,33 @@ class JiraApi {
         return [];
     }
 
+    async getScreensByScreenScheme(schemeId) {
+        // Fetch the screen scheme with screens expanded
+        const schemes = await this.listScreenSchemes({ id: schemeId, expand: 'screens' });
+        if (schemes.length === 0) {
+            throw new Error(`Screen scheme with ID ${schemeId} not found`);
+        }
+        
+        const scheme = schemes[0];
+        if (!scheme.screens) {
+            // No screens defined in this scheme
+            return [];
+        }
+        
+        // The screens object contains keys like 'default', 'edit', 'view', etc.
+        // Extract screen objects from those values
+        const screenObjects = Object.values(scheme.screens).filter(screen => screen && screen.id);
+        
+        // We have screen objects but they might be partial (only id and maybe name).
+        // To get full screen details, we could fetch each screen individually,
+        // but for consistency with other commands, we'll return the screen objects as-is.
+        // Alternatively, we could fetch all screens and filter by IDs.
+        // Let's fetch all screens and match by IDs to get full details.
+        const allScreens = await this.listScreens();
+        const screenIds = screenObjects.map(screen => screen.id);
+        return allScreens.filter(screen => screenIds.includes(screen.id));
+    }
+
     async getUnusedScreens() {
         // Fetch all screens
         const allScreens = await this.listScreens();
@@ -689,6 +716,269 @@ class JiraApi {
                 results.push({ id, success: false, error: errorMsg });
             }
         }
+        return results;
+    }
+
+    async searchFields(params = {}) {
+        let allFields = [];
+        let startAt = params.startAt || 0;
+        const maxResultsPerPage = params.maxResults || 50;
+        const totalLimit = params.maxResults; // Store the original maxResults as total limit
+        let hasMore = true;
+
+        while (hasMore) {
+            const requestParams = {
+                startAt: startAt,
+                maxResults: maxResultsPerPage
+            };
+
+            // Add optional parameters if provided
+            if (params.type) requestParams.type = params.type;
+            if (params.id) requestParams.id = params.id;
+            if (params.query) requestParams.query = params.query;
+            if (params.orderBy) requestParams.orderBy = params.orderBy;
+            if (params.expand) requestParams.expand = params.expand;
+            if (params.projectIds) requestParams.projectIds = params.projectIds;
+
+            const response = await axios.get(`${this.url}/rest/api/3/field/search`, this.createAxiosConfig({
+                params: requestParams
+            }));
+            
+            // Handle paginated response
+            if (response.data.values && Array.isArray(response.data.values)) {
+                const pageFields = response.data.values;
+                
+                // If we have a total limit, only take as many as we need
+                if (totalLimit && allFields.length + pageFields.length > totalLimit) {
+                    const remaining = totalLimit - allFields.length;
+                    allFields = allFields.concat(pageFields.slice(0, remaining));
+                    hasMore = false;
+                } else {
+                    allFields = allFields.concat(pageFields);
+                    hasMore = !response.data.isLast;
+                }
+                
+                startAt += maxResultsPerPage;
+            } else {
+                // If response is not paginated as expected, break
+                hasMore = false;
+                if (Array.isArray(response.data)) {
+                    allFields = allFields.concat(response.data);
+                }
+            }
+            
+            // Stop if we've reached the total limit
+            if (totalLimit && allFields.length >= totalLimit) {
+                hasMore = false;
+            }
+        }
+        
+        return allFields;
+    }
+
+    /**
+     * Get a single issue by ID or key
+     * @param {string} issueIdOrKey - Issue ID or key (e.g., "PROJ-123" or "10001")
+     * @param {Object} options - Additional options
+     * @param {string} options.fields - Comma-separated list of fields to include
+     * @param {string} options.expand - Comma-separated list of expansions
+     * @param {string} options.properties - Comma-separated list of properties to include
+     * @returns {Object} Issue data
+     */
+    async getIssue(issueIdOrKey, options = {}) {
+        const params = {};
+        
+        if (options.fields) params.fields = options.fields;
+        if (options.expand) params.expand = options.expand;
+        if (options.properties) params.properties = options.properties;
+        if (options.updateHistory !== undefined) params.updateHistory = options.updateHistory;
+
+        const response = await axios.get(`${this.url}/rest/api/3/issue/${issueIdOrKey}`, this.createAxiosConfig({
+            params: params
+        }));
+        
+        return response.data;
+    }
+
+    /**
+     * Search issues using JQL
+     * @param {string} jql - JQL query string
+     * @param {Object} options - Search options
+     * @param {string} options.fields - Comma-separated list of fields to include
+     * @param {string} options.expand - Comma-separated list of expansions
+     * @param {number} options.startAt - Starting index for pagination
+     * @param {number} options.maxResults - Maximum number of results to return
+     * @param {boolean} options.validateQuery - Whether to validate the JQL query
+     * @returns {Object} Search results with issues array
+     */
+    async searchIssues(jql, options = {}) {
+        const requestBody = {
+            jql: jql,
+            startAt: options.startAt || 0,
+            maxResults: options.maxResults || 50
+        };
+        
+        if (options.fields) requestBody.fields = options.fields;
+        if (options.expand) requestBody.expand = options.expand;
+        if (options.validateQuery !== undefined) requestBody.validateQuery = options.validateQuery;
+
+        const response = await axios.post(`${this.url}/rest/api/3/search/jql`,
+            requestBody,
+            this.createAxiosConfig({
+                headers: { 'Content-Type': 'application/json' }
+            }));
+        
+        return response.data;
+    }
+
+    /**
+     * Get multiple issues in batch
+     * @param {Array<string>} issueIdsOrKeys - Array of issue IDs or keys
+     * @param {Object} options - Additional options
+     * @param {string} options.fields - Comma-separated list of fields to include
+     * @param {string} options.expand - Comma-separated list of expansions
+     * @returns {Array<Object>} Array of issue data objects
+     */
+    async getIssuesBatch(issueIdsOrKeys, options = {}) {
+        const results = [];
+        
+        for (const issueIdOrKey of issueIdsOrKeys) {
+            try {
+                const issue = await this.getIssue(issueIdOrKey, options);
+                results.push({ issueIdOrKey, success: true, data: issue });
+            } catch (error) {
+                const errorMsg = error.response?.data?.errorMessages?.[0] ||
+                                error.response?.data?.errors ||
+                                error.message;
+                results.push({ issueIdOrKey, success: false, error: errorMsg });
+            }
+        }
+        
+        return results;
+    }
+
+    /**
+     * Update a single field on an issue
+     * @param {string} issueIdOrKey - Issue ID or key
+     * @param {string} fieldId - Field ID (e.g., "summary", "description", "customfield_10001")
+     * @param {any} value - New value for the field
+     * @returns {Object} Update response
+     */
+    async updateIssueField(issueIdOrKey, fieldId, value) {
+        const updateData = {
+            fields: {
+                [fieldId]: value
+            }
+        };
+
+        const response = await axios.put(`${this.url}/rest/api/3/issue/${issueIdOrKey}`, updateData, this.createAxiosConfig({
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }));
+        
+        return response.data;
+    }
+
+    /**
+     * Update a field on multiple issues in batch
+     * @param {Array<string>} issueIdsOrKeys - Array of issue IDs or keys
+     * @param {string} fieldId - Field ID to update
+     * @param {any} value - New value for the field
+     * @returns {Array<Object>} Array of update results
+     */
+    async updateIssueFieldsBatch(issueIdsOrKeys, fieldId, value) {
+        const results = [];
+        
+        for (const issueIdOrKey of issueIdsOrKeys) {
+            try {
+                await this.updateIssueField(issueIdOrKey, fieldId, value);
+                results.push({ issueIdOrKey, success: true });
+            } catch (error) {
+                const errorMsg = error.response?.data?.errorMessages?.[0] ||
+                                error.response?.data?.errors ||
+                                error.message;
+                results.push({ issueIdOrKey, success: false, error: errorMsg });
+            }
+        }
+        
+        return results;
+    }
+
+    /**
+     * Copy field value from one field to another within the same issue
+     * @param {string} sourceIssueIdOrKey - Source issue ID or key
+     * @param {string} sourceFieldId - Source field ID
+     * @param {string} targetFieldId - Target field ID
+     * @param {Object} options - Copy options
+     * @param {boolean} options.append - Whether to append to existing value (default: false)
+     * @param {string} options.separator - Separator to use when appending (default: "\n\n")
+     * @returns {Object} Copy operation result
+     */
+    async copyFieldValue(sourceIssueIdOrKey, sourceFieldId, targetFieldId, options = {}) {
+        // Get the source issue to read the field value
+        const sourceIssue = await this.getIssue(sourceIssueIdOrKey, {
+            fields: `${sourceFieldId},${targetFieldId}`
+        });
+        
+        let sourceValue = sourceIssue.fields?.[sourceFieldId];
+        let targetValue = sourceIssue.fields?.[targetFieldId];
+        
+        // Handle different field types
+        if (sourceValue === null || sourceValue === undefined) {
+            sourceValue = '';
+        }
+        
+        // Convert to string for text fields
+        if (typeof sourceValue === 'object') {
+            // For complex fields (like user, date, etc.), we need to handle them appropriately
+            // For now, convert to JSON string
+            sourceValue = JSON.stringify(sourceValue);
+        }
+        
+        let newValue;
+        if (options.append && targetValue) {
+            // Append mode
+            const separator = options.separator || '\n\n';
+            if (typeof targetValue === 'object') {
+                // For complex fields, convert to string first
+                targetValue = JSON.stringify(targetValue);
+            }
+            newValue = `${targetValue}${separator}${sourceValue}`;
+        } else {
+            // Replace mode
+            newValue = sourceValue;
+        }
+        
+        // Update the target field
+        return await this.updateIssueField(sourceIssueIdOrKey, targetFieldId, newValue);
+    }
+
+    /**
+     * Copy field values for multiple issues in batch
+     * @param {Array<string>} issueIdsOrKeys - Array of issue IDs or keys
+     * @param {string} sourceFieldId - Source field ID
+     * @param {string} targetFieldId - Target field ID
+     * @param {Object} options - Copy options
+     * @param {boolean} options.append - Whether to append to existing value
+     * @param {string} options.separator - Separator to use when appending
+     * @returns {Array<Object>} Array of copy results
+     */
+    async copyFieldValuesBatch(issueIdsOrKeys, sourceFieldId, targetFieldId, options = {}) {
+        const results = [];
+        
+        for (const issueIdOrKey of issueIdsOrKeys) {
+            try {
+                await this.copyFieldValue(issueIdOrKey, sourceFieldId, targetFieldId, options);
+                results.push({ issueIdOrKey, success: true });
+            } catch (error) {
+                const errorMsg = error.response?.data?.errorMessages?.[0] ||
+                                error.response?.data?.errors ||
+                                error.message;
+                results.push({ issueIdOrKey, success: false, error: errorMsg });
+            }
+        }
+        
         return results;
     }
 }

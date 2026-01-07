@@ -348,11 +348,17 @@ jira-cli list-screen-schemes
 ```
 
 #### 🖥️ `list-screens`
-**What it does**: Lists all screens
-**When to use**: When reviewing screen configurations
+**What it does**: Lists screens with optional filtering by screen scheme
+**When to use**: When reviewing screen configurations or finding screens associated with a specific screen scheme
+**Options**:
+    **-s, --screen-scheme-id <id>**: Filter screens by screen scheme ID (optional)
 **Example**:
 ```bash
+# List all screens
 jira-cli list-screens
+
+# List only screens associated with a specific screen scheme
+jira-cli list-screens --screen-scheme-id 10001
 ```
 
 #### 🗑️ `delete-issue-type-screen-schemes`
@@ -465,26 +471,199 @@ jira-cli set-email-logs -l logs@example.com --smtp-user smtp-user@example.com --
 ### 🛠️ Advanced Tools
 Powerful tools for complex operations
 
-#### 🧹 `cleanup`
-**What it does**: Comprehensive cleanup of unused resources
-**When to use**: Periodic maintenance or before major reorganizations
+#### 📋 `list-fields`
+**What it does**: Lists Jira fields with pagination, filtering, and advanced search capabilities
+**When to use**: When you need to find specific fields, audit field usage, or export field configurations
 **Options**:
-    **--complete**: Complete sequential cleanup: archived projects, workflow schemes, workflows, issue type screen schemes, issue type schemes, screen schemes, screens
-    **--workflows**: Clean inactive workflows without schemes
-    **--workflow-schemes**: Clean inactive workflow schemes
-    **--wf-schemes**: Alias for --workflow-schemes
-    **--exec**: Execute cleanup (without this option only lists items)
+    **--start-at <startAt>**: Page offset (default: 0) (optional)
+    **--max-results <maxResults>**: Items per page (default: 50) (optional)
+    **--type <type>**: Field types to search (custom, system) - comma separated (optional)
+    **--id <id>**: IDs of custom fields to return or filter - comma separated (optional)
+    **--query <query>**: Case-insensitive partial match with field names or descriptions (optional)
+    **--order-by <orderBy>**: Order results by: contextsCount, lastUsed, name, screensCount (with +/- prefixes) (optional)
+    **--expand <expand>**: Expand parameter (optional)
+    **--project-ids <projectIds>**: Project IDs to filter - comma separated (optional)
 **Example**:
 ```bash
-# Preview complete cleanup
-jira-cli cleanup --complete
+# List all fields with default pagination
+jira-cli list-fields
 
-# Execute cleanup of workflows
-jira-cli cleanup --workflows --exec
+# Search for fields containing "priority" in name or description
+jira-cli list-fields --query priority
 
-# Execute complete cleanup
-jira-cli cleanup --complete --exec
+# Filter by field type and order by name
+jira-cli list-fields --type custom --order-by +name
+
+# Paginate results (start at item 50, show 25 per page)
+jira-cli list-fields --start-at 50 --max-results 25
+
+# Filter by specific field IDs
+jira-cli list-fields --id customfield_10010,customfield_10020
 ```
+
+#### 🧹 `cleanup`
+    **What it does**: Comprehensive cleanup of unused resources
+    **When to use**: Periodic maintenance or before major reorganizations
+    **Options**:
+        **--complete**: Complete sequential cleanup: archived projects, workflow schemes, workflows, issue type screen schemes, issue type schemes, screen schemes, screens
+        **--workflows**: Clean inactive workflows without schemes
+        **--workflow-schemes**: Clean inactive workflow schemes
+        **--wf-schemes**: Alias for --workflow-schemes
+        **--exec**: Execute cleanup (without this option only lists items)
+    **Example**:
+    ```bash
+    # Preview complete cleanup
+    jira-cli cleanup --complete
+
+    # Execute cleanup of workflows
+    jira-cli cleanup --workflows --exec
+
+    # Execute complete cleanup
+    jira-cli cleanup --complete --exec
+    ```
+
+### 🎫 Issue Operations
+Commands for managing Jira issues
+
+#### 🔍 `get-issue`
+    **What it does**: Retrieves detailed information about a specific issue
+    **When to use**: When you need to view or export issue details
+    **Options**:
+        **-i, --issue <issueIdOrKey>**: Issue ID or key (e.g., PROJ-123 or 10001) (required)
+        **--fields <fields>**: Comma-separated list of fields to include (optional)
+        **--expand <expand>**: Comma-separated list of expansions (optional)
+        **--properties <properties>**: Comma-separated list of properties to include (optional)
+    **Example**:
+    ```bash
+    # Get basic issue details
+    jira-cli get-issue -i PROJ-123
+
+    # Get specific fields only
+    jira-cli get-issue -i PROJ-123 --fields summary,description,status
+
+    # Get with expanded information
+    jira-cli get-issue -i PROJ-123 --expand renderedFields,names,schema
+    ```
+
+#### 🔎 `search-issues`
+    **What it does**: Searches for issues using JQL (Jira Query Language)
+    **When to use**: When you need to find issues matching specific criteria
+    **Options**:
+        **-j, --jql <jql>**: JQL query string (required)
+        **--fields <fields>**: Comma-separated list of fields to include (optional)
+        **--expand <expand>**: Comma-separated list of expansions (optional)
+        **--start-at <startAt>**: Starting index for pagination (default: 0) (optional)
+        **--max-results <maxResults>**: Maximum number of results to return (default: 50) (optional)
+        **--validate-query**: Whether to validate the JQL query (optional)
+    **Example**:
+    ```bash
+    # Search for issues in a project
+    jira-cli search-issues -j "project = PROJ"
+
+    # Search with pagination
+    jira-cli search-issues -j "status = 'In Progress'" --start-at 0 --max-results 100
+
+    # Search with specific fields
+    jira-cli search-issues -j "assignee = currentUser()" --fields summary,status,priority
+    ```
+
+#### 📋 `get-issues-batch`
+    **What it does**: Retrieves multiple issues in a single batch operation
+    **When to use**: When you need to get details for multiple specific issues
+    **Options**:
+        **-i, --issues <issues>**: Issue IDs or keys separated by comma (e.g., PROJ-123,PROJ-124,10001) (required)
+        **--fields <fields>**: Comma-separated list of fields to include (optional)
+        **--expand <expand>**: Comma-separated list of expansions (optional)
+    **Example**:
+    ```bash
+    # Get multiple issues
+    jira-cli get-issues-batch -i PROJ-123,PROJ-124,PROJ-125
+
+    # Get multiple issues with specific fields
+    jira-cli get-issues-batch -i PROJ-123,PROJ-124 --fields summary,status,assignee
+    ```
+
+#### ✏️ `set-issue-field-value`
+    **What it does**: Updates a field value on a specific issue
+    **When to use**: When you need to modify issue fields programmatically
+    **Options**:
+        **-i, --issue <issueIdOrKey>**: Issue ID or key (required)
+        **-f, --field <fieldId>**: Field ID (e.g., summary, description, customfield_10001) (required)
+        **-v, --value <value>**: New value for the field (required)
+        **--dry-run**: Preview the change without executing (optional)
+        **--confirm**: Ask for confirmation before executing (optional)
+    **Example**:
+    ```bash
+    # Update issue summary
+    jira-cli set-issue-field-value -i PROJ-123 -f summary -v "New summary text"
+
+    # Preview update without executing
+    jira-cli set-issue-field-value -i PROJ-123 -f description -v "New description" --dry-run
+
+    # Update with confirmation prompt
+    jira-cli set-issue-field-value -i PROJ-123 -f customfield_10001 -v "New value" --confirm
+    ```
+
+#### 📦 `set-issue-field-value-batch`
+    **What it does**: Updates a field value on multiple issues
+    **When to use**: When you need to apply the same change to multiple issues
+    **Options**:
+        **-i, --issues <issues>**: Issue IDs or keys separated by comma (required)
+        **-f, --field <fieldId>**: Field ID to update (required)
+        **-v, --value <value>**: New value for the field (required)
+        **--dry-run**: Preview the change without executing (optional)
+        **--confirm**: Ask for confirmation before executing (optional)
+    **Example**:
+    ```bash
+    # Update summary on multiple issues
+    jira-cli set-issue-field-value-batch -i PROJ-123,PROJ-124,PROJ-125 -f summary -v "Updated summary"
+
+    # Preview batch update
+    jira-cli set-issue-field-value-batch -i PROJ-123,PROJ-124 -f description -v "New description" --dry-run
+    ```
+
+#### 🔄 `copy-item-fields-values`
+    **What it does**: Copies field value from one field to another within the same issue
+    **When to use**: When you need to duplicate or migrate field data
+    **Options**:
+        **-i, --issue <issueIdOrKey>**: Issue ID or key (required)
+        **-s, --source-field <sourceFieldId>**: Source field ID (required)
+        **-t, --target-field <targetFieldId>**: Target field ID (required)
+        **--append**: Append to existing value instead of replacing (optional)
+        **--separator <separator>**: Separator to use when appending (default: "\n\n") (optional)
+        **--dry-run**: Preview the change without executing (optional)
+        **--confirm**: Ask for confirmation before executing (optional)
+    **Example**:
+    ```bash
+    # Copy description to a custom field
+    jira-cli copy-item-fields-values -i PROJ-123 -s description -t customfield_10001
+
+    # Append with custom separator
+    jira-cli copy-item-fields-values -i PROJ-123 -s summary -t description --append --separator "\n---\n"
+
+    # Preview copy operation
+    jira-cli copy-item-fields-values -i PROJ-123 -s customfield_10001 -t customfield_10002 --dry-run
+    ```
+
+#### 📦 `copy-item-fields-values-batch`
+    **What it does**: Copies field values for multiple issues
+    **When to use**: When you need to migrate field data across multiple issues
+    **Options**:
+        **-i, --issues <issues>**: Issue IDs or keys separated by comma (required)
+        **-s, --source-field <sourceFieldId>**: Source field ID (required)
+        **-t, --target-field <targetFieldId>**: Target field ID (required)
+        **--append**: Append to existing value instead of replacing (optional)
+        **--separator <separator>**: Separator to use when appending (default: "\n\n") (optional)
+        **--dry-run**: Preview the change without executing (optional)
+        **--confirm**: Ask for confirmation before executing (optional)
+    **Example**:
+    ```bash
+    # Copy field values across multiple issues
+    jira-cli copy-item-fields-values-batch -i PROJ-123,PROJ-124,PROJ-125 -s customfield_10001 -t customfield_10002
+
+    # Batch append with confirmation
+    jira-cli copy-item-fields-values-batch -i PROJ-123,PROJ-124 -s summary -t description --append --confirm
+    ```
 
 ---
 
@@ -533,17 +712,48 @@ jira-cli update-projects-category -k PROJ1,PROJ2,PROJ3 -c 10010
 ```
 
 ### 📧 Recipe 4: "Setting up email notifications"
-**Situation**: Want email confirmations for cleanup operations  
-**Solution**:
-```bash
-# 1. Configure email logging
-jira-cli set-email-logs -l your-email@example.com --smtp-user smtp-user@example.com --smtp-pass your-app-password
+    **Situation**: Want email confirmations for cleanup operations
+    **Solution**:
+    ```bash
+    # 1. Configure email logging
+    jira-cli set-email-logs -l your-email@example.com --smtp-user smtp-user@example.com --smtp-pass your-app-password
 
-# 2. Test with a small cleanup
-jira-cli cleanup --workflows --exec
+    # 2. Test with a small cleanup
+    jira-cli cleanup --workflows --exec
 
-# 3. Check your inbox for the operation summary!
-```
+    # 3. Check your inbox for the operation summary!
+    ```
+
+### 🎫 Recipe 5: "Bulk update issue fields"
+    **Situation**: Need to update the same field on multiple issues
+    **Solution**:
+    ```bash
+    # 1. First, find the issues you want to update
+    jira-cli search-issues -j "project = PROJ AND status = 'To Do'"
+
+    # 2. Preview the update without executing
+    jira-cli set-issue-field-value-batch -i PROJ-123,PROJ-124,PROJ-125 -f customfield_10001 -v "New Value" --dry-run
+
+    # 3. Execute the update with confirmation
+    jira-cli set-issue-field-value-batch -i PROJ-123,PROJ-124,PROJ-125 -f customfield_10001 -v "New Value" --confirm
+
+    # 4. Verify the changes
+    jira-cli get-issues-batch -i PROJ-123,PROJ-124,PROJ-125 --fields customfield_10001
+    ```
+
+### 🔄 Recipe 6: "Migrating field data between fields"
+    **Situation**: Need to copy data from one custom field to another
+    **Solution**:
+    ```bash
+    # 1. Preview the copy operation
+    jira-cli copy-item-fields-values-batch -i PROJ-123,PROJ-124,PROJ-125 -s customfield_10001 -t customfield_10002 --dry-run
+
+    # 2. Execute with append mode (preserve existing data)
+    jira-cli copy-item-fields-values-batch -i PROJ-123,PROJ-124,PROJ-125 -s customfield_10001 -t customfield_10002 --append --separator "\n---\n" --confirm
+
+    # 3. Verify the migration
+    jira-cli get-issues-batch -i PROJ-123,PROJ-124,PROJ-125 --fields customfield_10001,customfield_10002
+    ```
 
 ---
 
