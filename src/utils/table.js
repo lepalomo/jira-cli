@@ -1,4 +1,5 @@
 const Table = require('cli-table3');
+const { extractTextFromDoc } = require('./docExtractor');
 
 function createProjectsTable(projects) {
     const table = new Table({
@@ -260,7 +261,7 @@ function createIssuesTable(issues) {
         const status = issue.fields?.status?.name || 'N/A';
         const priority = issue.fields?.priority?.name || 'N/A';
         const assignee = issue.fields?.assignee?.displayName || 'Unassigned';
-        
+
         // Format dates
         let created = 'N/A';
         let updated = 'N/A';
@@ -297,20 +298,231 @@ function createIssuesTable(issues) {
     return table.toString();
 }
 
-function createIssueDetailTable(issue) {
+/**
+ * Determine the type of a Jira field based on field ID, value, and schema information
+ * @param {string} fieldId - The field ID (e.g., 'summary', 'customfield_12345')
+ * @param {*} value - The field value
+ * @param {Object} schema - Optional field schema information
+ * @returns {string} Field type description
+ */
+function getFieldType(fieldId, value, schema = null) {
+    // Handle empty or invalid field IDs
+    if (!fieldId || typeof fieldId !== 'string' || fieldId.trim() === '') {
+        return 'Unknown';
+    }
+    
+    // Check if it's a custom field
+    if (fieldId.startsWith('customfield_')) {
+        // Try to determine custom field type from schema
+        if (schema) {
+            if (schema.custom && typeof schema.custom === 'string') {
+                // Extract custom field type from schema.custom
+                // Handle different formats: with or without prefix
+                let customType = schema.custom;
+                if (customType.includes(':')) {
+                    // Extract the part after the last colon
+                    const parts = customType.split(':');
+                    customType = parts[parts.length - 1];
+                }
+                
+                // Map common custom field types to readable names
+                const typeMap = {
+                    'textfield': 'Text Field',
+                    'textarea': 'Text Area',
+                    'select': 'Select List',
+                    'multiselect': 'Multi-Select',
+                    'radiobuttons': 'Radio Buttons',
+                    'multicheckboxes': 'Multi-Checkboxes',
+                    'datepicker': 'Date Picker',
+                    'datetime': 'Date Time',
+                    'userpicker': 'User Picker',
+                    'grouppicker': 'Group Picker',
+                    'projectpicker': 'Project Picker',
+                    'versionpicker': 'Version Picker',
+                    'labels': 'Labels',
+                    'url': 'URL',
+                    'float': 'Number',
+                    'number': 'Number'
+                };
+                
+                // Return mapped type or the custom type itself
+                return typeMap[customType] || customType;
+            }
+            if (schema.type && typeof schema.type === 'string') {
+                // System field types from schema
+                const systemTypeMap = {
+                    'string': 'String',
+                    'number': 'Number',
+                    'date': 'Date',
+                    'datetime': 'Date Time',
+                    'user': 'User',
+                    'array': 'Array',
+                    'any': 'Any',
+                    'option': 'Option',
+                    'option-with-child': 'Option with Child'
+                };
+                return systemTypeMap[schema.type] || schema.type;
+            }
+        }
+        
+        // If no schema, try to infer from value type
+        if (value !== null && value !== undefined) {
+            if (typeof value === 'object') {
+                if (Array.isArray(value)) {
+                    return 'Array';
+                }
+                if (value.type === 'doc') {
+                    return 'ADF Document';
+                }
+                if (value.displayName !== undefined) {
+                    return 'User';
+                }
+                if (value.name !== undefined) {
+                    return 'Named Object';
+                }
+                if (value.value !== undefined) {
+                    return 'Option';
+                }
+                return 'Object';
+            }
+            if (typeof value === 'string') {
+                // Check if it's a date string (YYYY-MM-DD format)
+                // More strict validation: must be valid date and not include time
+                if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                    // Validate it's a real date (not like 2024-13-45)
+                    const date = new Date(value);
+                    if (!isNaN(date.getTime())) {
+                        // Check if the parsed date matches the input (to catch invalid dates like 2024-02-31)
+                        const [year, month, day] = value.split('-').map(Number);
+                        if (date.getFullYear() === year &&
+                            date.getMonth() + 1 === month &&
+                            date.getDate() === day) {
+                            return 'Date';
+                        }
+                    }
+                }
+                // Check for ISO datetime strings (with T or space)
+                if (/^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}/.test(value)) {
+                    const date = new Date(value);
+                    if (!isNaN(date.getTime())) {
+                        return 'Date Time';
+                    }
+                }
+                return 'String';
+            }
+            if (typeof value === 'number') {
+                return 'Number';
+            }
+            if (typeof value === 'boolean') {
+                return 'Boolean';
+            }
+        }
+        
+        return 'Custom Field';
+    }
+    
+    // System fields - map known field IDs to types
+    const systemFieldTypes = {
+        // Basic fields
+        'key': 'Issue Key',
+        'id': 'ID',
+        'self': 'URL',
+        
+        // Common issue fields
+        'summary': 'String',
+        'description': 'ADF Document',
+        'issuetype': 'Issue Type',
+        'status': 'Status',
+        'priority': 'Priority',
+        'assignee': 'User',
+        'reporter': 'User',
+        'creator': 'User',
+        'created': 'Date Time',
+        'updated': 'Date Time',
+        'resolution': 'Resolution',
+        'resolutiondate': 'Date Time',
+        'duedate': 'Date',
+        'project': 'Project',
+        
+        // Other system fields
+        'labels': 'Array',
+        'components': 'Array',
+        'fixVersions': 'Array',
+        'affectsVersions': 'Array',
+        'environment': 'ADF Document',
+        'comment': 'Comments',
+        'worklog': 'Work Logs',
+        'attachment': 'Attachments',
+        'subtasks': 'Array',
+        'issuelinks': 'Array',
+        'watches': 'Watches',
+        'timeestimate': 'Number',
+        'timeoriginalestimate': 'Number',
+        'timespent': 'Number',
+        'aggregatetimespent': 'Number',
+        'aggregatetimeestimate': 'Number',
+        'aggregatetimeoriginalestimate': 'Number',
+        'progress': 'Progress',
+        'votes': 'Votes',
+        'workratio': 'Number',
+        'lastViewed': 'Date Time',
+        'parent': 'Parent Issue'
+    };
+    
+    // Return mapped type or infer from value
+    if (systemFieldTypes[fieldId]) {
+        return systemFieldTypes[fieldId];
+    }
+    
+    // Infer from value if not mapped
+    if (value !== null && value !== undefined) {
+        const valueType = typeof value;
+        if (valueType === 'object') {
+            if (Array.isArray(value)) {
+                return 'Array';
+            }
+            if (value.type === 'doc') {
+                return 'ADF Document';
+            }
+            return 'Object';
+        }
+        return valueType.charAt(0).toUpperCase() + valueType.slice(1);
+    }
+    
+    return 'Unknown';
+}
+
+function createIssueDetailTable(issue, requestedFields = null) {
     const table = new Table({
-        head: ['Field', 'Value'],
-        colWidths: [30, 70]
+        head: ['FieldID', 'Field', 'Type', 'Value'],
+        colWidths: [20, 25, 20, 120]
     });
 
     // Add basic issue information
-    table.push(['Key', issue.key || 'N/A']);
-    table.push(['ID', issue.id || 'N/A']);
-    table.push(['Self', issue.self || 'N/A']);
+    const keyType = getFieldType('key', issue.key);
+    const idType = getFieldType('id', issue.id);
+    const selfType = getFieldType('self', issue.self);
     
+    table.push(['key', 'Key', keyType.length > 20 ? keyType.substring(0, 17) + '...' : keyType, issue.key || 'N/A']);
+    table.push(['id', 'ID', idType.length > 20 ? idType.substring(0, 17) + '...' : idType, issue.id || 'N/A']);
+    table.push(['self', 'Self', selfType.length > 20 ? selfType.substring(0, 17) + '...' : selfType, issue.self || 'N/A']);
+
+    // Track which fields we've already displayed
+    const displayedFields = new Set(['key', 'id', 'self']);
+
+    // Parse requestedFields if provided as string
+    let requestedFieldsSet = null;
+    if (requestedFields) {
+        if (typeof requestedFields === 'string') {
+            requestedFieldsSet = new Set(requestedFields.split(',').map(f => f.trim()));
+        } else if (Array.isArray(requestedFields)) {
+            requestedFieldsSet = new Set(requestedFields);
+        }
+    }
+
     // Add fields from the issue
     if (issue.fields) {
-        // Common fields to display
+        // Common fields to display with nice labels
         const commonFields = [
             { key: 'summary', label: 'Summary' },
             { key: 'description', label: 'Description' },
@@ -327,26 +539,138 @@ function createIssueDetailTable(issue) {
             { key: 'project', label: 'Project', transform: (val) => val?.name || 'N/A' }
         ];
 
+        // Display common fields first
         commonFields.forEach(field => {
             const value = issue.fields[field.key];
             let displayValue;
-            
+
             if (field.transform) {
                 displayValue = field.transform(value);
             } else if (typeof value === 'object' && value !== null) {
-                displayValue = JSON.stringify(value);
+                // Check if it's a doc type structure
+                if (value.type === 'doc') {
+                    displayValue = extractTextFromDoc(value);
+                } else {
+                    displayValue = JSON.stringify(value);
+                }
             } else if (value === null || value === undefined) {
                 displayValue = 'N/A';
             } else {
                 displayValue = value.toString();
             }
-            
-            // Truncate long values
-            if (displayValue.length > 100) {
-                displayValue = displayValue.substring(0, 97) + '...';
+
+            // Truncate long values (up to 120 chars to match column width)
+            if (displayValue.length > 120) {
+                displayValue = displayValue.substring(0, 117) + '...';
             }
+
+            // Get field type and truncate if too long for column (20 chars)
+            const fieldType = getFieldType(field.key, value);
+            const displayType = fieldType.length > 20 ? fieldType.substring(0, 17) + '...' : fieldType;
             
-            table.push([field.label, displayValue]);
+            table.push([field.key, field.label, displayType, displayValue]);
+            displayedFields.add(field.key);
+        });
+
+        // Define default field keys (key, id, self + common fields)
+        const defaultFieldKeys = new Set([
+            'key', 'id', 'self',
+            ...commonFields.map(f => f.key)
+        ]);
+
+        // Now display any other fields that weren't in the common fields list
+        // Sort keys alphabetically for consistent output
+        const allFieldKeys = Object.keys(issue.fields).sort();
+
+        allFieldKeys.forEach(fieldKey => {
+            // Skip if we've already displayed this field
+            if (displayedFields.has(fieldKey)) {
+                return;
+            }
+
+            // Determine if this is a custom field
+            const isCustomField = fieldKey.startsWith('customfield_');
+
+            // Determine if we should show this field based on requested fields
+            let shouldShow = false;
+
+            if (requestedFieldsSet === null) {
+                // No fields requested: only show default fields
+                shouldShow = defaultFieldKeys.has(fieldKey);
+            } else {
+                // Fields requested: show default fields OR requested fields
+                shouldShow = defaultFieldKeys.has(fieldKey) || requestedFieldsSet.has(fieldKey);
+            }
+
+            if (!shouldShow) {
+                return;
+            }
+
+            const value = issue.fields[fieldKey];
+            let displayValue;
+
+            // Format the value appropriately
+            if (value === null || value === undefined) {
+                displayValue = 'N/A';
+            } else if (typeof value === 'object') {
+                // Handle complex objects
+                if (value.name !== undefined) {
+                    // For objects with a name property (like user, component, etc.)
+                    displayValue = value.name;
+                } else if (value.displayName !== undefined) {
+                    // For user objects with displayName
+                    displayValue = value.displayName;
+                } else if (value.value !== undefined) {
+                    // For objects with a value property (like select list options)
+                    displayValue = value.value;
+                } else if (Array.isArray(value)) {
+                    // For arrays, show count and first few items
+                    if (value.length === 0) {
+                        displayValue = 'Empty';
+                    } else if (value.length <= 3) {
+                        // For small arrays, show all items
+                        displayValue = value.map(item => {
+                            if (typeof item === 'object') {
+                                return item.name || item.displayName || item.value || JSON.stringify(item);
+                            }
+                            return item.toString();
+                        }).join(', ');
+                    } else {
+                        // For large arrays, show count
+                        displayValue = `${value.length} items`;
+                    }
+                } else if (value.type === 'doc') {
+                    // Handle Jira document structure
+                    displayValue = extractTextFromDoc(value);
+                } else {
+                    // Fallback to JSON string
+                    displayValue = JSON.stringify(value);
+                }
+            } else {
+                // For primitive values
+                displayValue = value.toString();
+            }
+
+            // Truncate long values (up to 120 chars to match column width)
+            if (displayValue.length > 120) {
+                displayValue = displayValue.substring(0, 117) + '...';
+            }
+
+            // For custom fields (starting with customfield_), use the field ID as label
+            // For other fields, use a capitalized version of the key
+            let fieldLabel = fieldKey;
+            if (isCustomField) {
+                fieldLabel = `Custom Field (${fieldKey})`;
+            } else {
+                // Capitalize first letter and replace underscores with spaces
+                fieldLabel = fieldKey.charAt(0).toUpperCase() + fieldKey.slice(1).replace(/_/g, ' ');
+            }
+
+            // Get field type and truncate if too long for column (20 chars)
+            const fieldType = getFieldType(fieldKey, value);
+            const displayType = fieldType.length > 20 ? fieldType.substring(0, 17) + '...' : fieldType;
+            
+            table.push([fieldKey, fieldLabel, displayType, displayValue]);
         });
     }
 
@@ -364,5 +688,6 @@ module.exports = {
     createScreensTable,
     createFieldsTable,
     createIssuesTable,
-    createIssueDetailTable
+    createIssueDetailTable,
+    getFieldType
 };

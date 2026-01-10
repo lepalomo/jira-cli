@@ -468,8 +468,22 @@ Commands for email configuration and operation logs
 jira-cli set-email-logs -l logs@example.com --smtp-user smtp-user@example.com --smtp-pass your-smtp-password
 ```
 
-### 🛠️ Advanced Tools
-Powerful tools for complex operations
+### 🔄 Recipe 10: "Undoing field operations with operation ID"
+    **Situation**: You just executed a field copy/update operation and need to revert it using the operation ID
+    **Solution**:
+    ```bash
+    # 1. Use operation ID from batch operations (most precise method)
+    jira-cli undo-field-operation -o "op_1234567890" -t description --exec
+
+    # 2. Use JQL from your original operation to find affected issues
+    jira-cli undo-field-operation -j "project in (Relatórios) AND updated >= -10m" -t description --exec
+
+    # 3. Use specific issue keys if you know them
+    jira-cli undo-field-operation -i PROJ-123,PROJ-124,PROJ-125 -t customfield_10001 --exec
+
+    # 4. For recent operations, use time-based JQL
+    jira-cli undo-field-operation -j "project = PROJ AND updated >= -1h" -t customfield_10001 --exec
+    ```
 
 #### 📋 `list-fields`
 **What it does**: Lists Jira fields with pagination, filtering, and advanced search capabilities
@@ -590,18 +604,17 @@ Commands for managing Jira issues
         **-i, --issue <issueIdOrKey>**: Issue ID or key (required)
         **-f, --field <fieldId>**: Field ID (e.g., summary, description, customfield_10001) (required)
         **-v, --value <value>**: New value for the field (required)
-        **--dry-run**: Preview the change without executing (optional)
-        **--confirm**: Ask for confirmation before executing (optional)
+        **--exec**: Execute the update (without this option, only preview what would be updated) (optional)
     **Example**:
     ```bash
-    # Update issue summary
+    # Preview update without executing
     jira-cli set-issue-field-value -i PROJ-123 -f summary -v "New summary text"
 
-    # Preview update without executing
-    jira-cli set-issue-field-value -i PROJ-123 -f description -v "New description" --dry-run
+    # Execute the update
+    jira-cli set-issue-field-value -i PROJ-123 -f summary -v "New summary text" --exec
 
-    # Update with confirmation prompt
-    jira-cli set-issue-field-value -i PROJ-123 -f customfield_10001 -v "New value" --confirm
+    # Update with append mode
+    jira-cli set-issue-field-value -i PROJ-123 -f description -v "Additional text" --append --exec
     ```
 
 #### 📦 `set-issue-field-value-batch`
@@ -611,58 +624,72 @@ Commands for managing Jira issues
         **-i, --issues <issues>**: Issue IDs or keys separated by comma (required)
         **-f, --field <fieldId>**: Field ID to update (required)
         **-v, --value <value>**: New value for the field (required)
-        **--dry-run**: Preview the change without executing (optional)
-        **--confirm**: Ask for confirmation before executing (optional)
+        **--exec**: Execute the update (without this option, only preview what would be updated) (optional)
     **Example**:
     ```bash
-    # Update summary on multiple issues
+    # Preview batch update
     jira-cli set-issue-field-value-batch -i PROJ-123,PROJ-124,PROJ-125 -f summary -v "Updated summary"
 
-    # Preview batch update
-    jira-cli set-issue-field-value-batch -i PROJ-123,PROJ-124 -f description -v "New description" --dry-run
+    # Execute batch update
+    jira-cli set-issue-field-value-batch -i PROJ-123,PROJ-124 -f description -v "New description" --exec
     ```
 
-#### 🔄 `copy-item-fields-values`
-    **What it does**: Copies field value from one field to another within the same issue
-    **When to use**: When you need to duplicate or migrate field data
+#### 🔄 `copy-issue-fields-values`
+    **What it does**: Copies field values from multiple fields to another within the same issue
+    **When to use**: When you need to duplicate or migrate field data or combine multiple fields
     **Options**:
         **-i, --issue <issueIdOrKey>**: Issue ID or key (required)
-        **-s, --source-field <sourceFieldId>**: Source field ID (required)
+        **-s, --source-fields <sourceFields>**: Source field IDs separated by comma (required)
         **-t, --target-field <targetFieldId>**: Target field ID (required)
         **--append**: Append to existing value instead of replacing (optional)
         **--separator <separator>**: Separator to use when appending (default: "\n\n") (optional)
-        **--dry-run**: Preview the change without executing (optional)
-        **--confirm**: Ask for confirmation before executing (optional)
+        **--field-separator <fieldSeparator>**: Separator between multiple source fields (default: "\n\n") (optional)
+        **--exec**: Execute the copy (without this option, only preview what would be copied) (optional)
     **Example**:
     ```bash
-    # Copy description to a custom field
-    jira-cli copy-item-fields-values -i PROJ-123 -s description -t customfield_10001
-
-    # Append with custom separator
-    jira-cli copy-item-fields-values -i PROJ-123 -s summary -t description --append --separator "\n---\n"
-
     # Preview copy operation
-    jira-cli copy-item-fields-values -i PROJ-123 -s customfield_10001 -t customfield_10002 --dry-run
+    jira-cli copy-issue-fields-values -i PROJ-123 -s summary,description -t customfield_10001
+
+    # Execute copy with custom separators
+    jira-cli copy-issue-fields-values -i PROJ-123 -s summary,priority -t description --append --field-separator " --- " --separator "\n---\n" --exec
+
+    # Execute copy operation
+    jira-cli copy-issue-fields-values -i PROJ-123 -s customfield_10001,customfield_10002 -t customfield_10003 --exec
     ```
 
-#### 📦 `copy-item-fields-values-batch`
-    **What it does**: Copies field values for multiple issues
-    **When to use**: When you need to migrate field data across multiple issues
+#### 📦 `copy-issue-fields-values-batch`
+    **What it does**: Copies field values for multiple issues with support for multiple source fields, JQL search, and performance optimizations
+    **When to use**: When you need to migrate field data across multiple issues or combine multiple fields, especially for large datasets
     **Options**:
-        **-i, --issues <issues>**: Issue IDs or keys separated by comma (required)
-        **-s, --source-field <sourceFieldId>**: Source field ID (required)
+        **-i, --issues <issues>**: Issue IDs or keys separated by comma (optional if using JQL)
+        **-j, --jql <jql>**: JQL query to find issues (optional if using issue IDs)
+        **-s, --source-fields <sourceFields>**: Source field IDs separated by comma (required)
         **-t, --target-field <targetFieldId>**: Target field ID (required)
         **--append**: Append to existing value instead of replacing (optional)
         **--separator <separator>**: Separator to use when appending (default: "\n\n") (optional)
-        **--dry-run**: Preview the change without executing (optional)
-        **--confirm**: Ask for confirmation before executing (optional)
+        **--field-separator <fieldSeparator>**: Separator between multiple source fields (default: "\n\n") (optional)
+        **--batch-size <batchSize>**: Number of issues to process in parallel (default: 10) (optional)
+        **--chunk-size <chunkSize>**: Number of issues to process per chunk (default: 100) (optional)
+        **--exec**: Execute the copy (without this option, only preview what would be copied) (optional)
+    **Performance Features**:
+        - **Parallel Processing**: Processes multiple issues simultaneously for faster execution
+        - **Chunking**: Breaks large datasets into manageable chunks to avoid memory issues and timeouts
+        - **Rate Limiting**: Includes delays between batches to avoid overwhelming Jira API
+        - **Progress Tracking**: Shows real-time progress with ETA and processing rate
+        - **Error Resilience**: Continues processing even if individual issues fail
     **Example**:
     ```bash
-    # Copy field values across multiple issues
-    jira-cli copy-item-fields-values-batch -i PROJ-123,PROJ-124,PROJ-125 -s customfield_10001 -t customfield_10002
+    # Copy multiple fields across multiple issues with default performance settings
+    jira-cli copy-issue-fields-values-batch -i PROJ-123,PROJ-124,PROJ-125 -s summary,description -t customfield_10002
 
-    # Batch append with confirmation
-    jira-cli copy-item-fields-values-batch -i PROJ-123,PROJ-124 -s summary -t description --append --confirm
+    # Preview copy operation with JQL search
+    jira-cli copy-issue-fields-values-batch -j "project = PROJ AND status = 'Done'" -s customfield_10001,customfield_10003 -t description --field-separator " --- " --append
+
+    # Execute high-performance batch copy for large datasets
+    jira-cli copy-issue-fields-values-batch -j "project in (PROJ1, PROJ2) AND created >= -30d" -s summary,priority -t customfield_10005 --batch-size 20 --chunk-size 500 --exec
+
+    # Execute copy operation
+    jira-cli copy-issue-fields-values-batch -j "assignee = currentUser()" -s summary,priority -t customfield_10005 --exec
     ```
 
 ---
@@ -742,17 +769,51 @@ jira-cli update-projects-category -k PROJ1,PROJ2,PROJ3 -c 10010
     ```
 
 ### 🔄 Recipe 6: "Migrating field data between fields"
-    **Situation**: Need to copy data from one custom field to another
+    **Situation**: Need to copy data from multiple custom fields to another or use JQL to find specific issues
     **Solution**:
     ```bash
-    # 1. Preview the copy operation
-    jira-cli copy-item-fields-values-batch -i PROJ-123,PROJ-124,PROJ-125 -s customfield_10001 -t customfield_10002 --dry-run
+    # 1. Preview copying multiple fields using JQL search
+    jira-cli copy-issue-fields-values-batch -j "project = PROJ AND status = 'Done'" -s customfield_10001,summary,description -t customfield_10002 --dry-run
 
-    # 2. Execute with append mode (preserve existing data)
-    jira-cli copy-item-fields-values-batch -i PROJ-123,PROJ-124,PROJ-125 -s customfield_10001 -t customfield_10002 --append --separator "\n---\n" --confirm
+    # 2. Execute with append mode and custom field separator
+    jira-cli copy-issue-fields-values-batch -j "project = PROJ AND status = 'Done'" -s customfield_10001,summary -t customfield_10002 --append --field-separator " --- " --confirm
 
-    # 3. Verify the migration
-    jira-cli get-issues-batch -i PROJ-123,PROJ-124,PROJ-125 --fields customfield_10001,customfield_10002
+    # 3. Verify the migration using JQL
+    jira-cli search-issues -j "project = PROJ AND customfield_10002 is not EMPTY" --fields customfield_10001,customfield_10002
+    ```
+
+### 🚀 Recipe 7: "High-performance batch operations for thousands of issues"
+    **Situation**: Need to process thousands of issues efficiently without timeouts or rate limits
+    **Solution**:
+    ```bash
+    # 1. First, estimate the scope with a dry-run
+    jira-cli copy-issue-fields-values-batch -j "project in (PROJ1, PROJ2, PROJ3) AND created >= -90d" -s summary,description,customfield_10001 -t customfield_10010 --dry-run
+
+    # 2. For large datasets (1000+ issues), use optimized performance settings
+    jira-cli copy-issue-fields-values-batch -j "project in (PROJ1, PROJ2, PROJ3) AND created >= -90d" -s summary,description,customfield_10001 -t customfield_10010 --batch-size 20 --chunk-size 500 --confirm
+
+    # 3. For very large datasets (5000+ issues), use conservative settings to avoid API limits
+    jira-cli copy-issue-fields-values-batch -j "project in (PROJ1, PROJ2, PROJ3)" -s summary,description -t customfield_10010 --batch-size 5 --chunk-size 200 --append --confirm
+
+    # 4. Monitor progress and performance with real-time feedback
+    # The command will show: "Processing 1250/5000 issues (25.0%) - ETA: 180s"
+    ```
+
+### 🔧 Recipe 8: "Troubleshooting large batch operations"
+    **Situation**: Batch operations failing or running slowly
+    **Solution**:
+    ```bash
+    # 1. If getting timeouts, reduce batch and chunk sizes
+    jira-cli copy-issue-fields-values-batch -j "your-jql-here" -s source-fields -t target-field --batch-size 5 --chunk-size 50
+
+    # 2. If getting rate limit errors, use smaller batch sizes
+    jira-cli copy-issue-fields-values-batch -j "your-jql-here" -s source-fields -t target-field --batch-size 3 --chunk-size 100
+
+    # 3. For maximum reliability with large datasets
+    jira-cli copy-issue-fields-values-batch -j "your-jql-here" -s source-fields -t target-field --batch-size 1 --chunk-size 50
+
+    # 4. Test with a small subset first
+    jira-cli copy-issue-fields-values-batch -j "your-jql-here AND key in (TEST-1, TEST-2, TEST-3)" -s source-fields -t target-field --dry-run
     ```
 
 ---
@@ -777,6 +838,70 @@ Advanced users can adjust the timeout by modifying:
 - `src/commands/commands.js` - Command-level timeout
 
 **💡 Pro Tip**: If you frequently hit timeouts, consider breaking large operations into smaller batches!
+
+---
+
+## 🛡️ Rate Limit Handling
+
+### 🚦 Automatic Rate Limit Management
+Jira CLI automatically handles **429 Too Many Requests** errors with intelligent retry logic:
+
+- **Exponential Backoff**: Delays increase progressively (5s → 10s → 20s → 30s max)
+- **Jitter**: Random variation prevents thundering herd problems
+- **Retry-After Respect**: Uses Jira's suggested retry delays when provided
+- **Smart Logging**: Tracks all rate limit encounters for transparency
+
+### 📊 Rate Limit Information Display
+After batch operations, you'll see rate limit statistics if any were encountered:
+
+```
+============================================================
+⚠️  RATE LIMIT INFORMATION
+============================================================
+Total rate limit hits: 3
+
+Rate limit reasons:
+  • jira-quota-global-based: 2 times
+  • jira-burst-based: 1 times
+
+Affected operations:
+  • updateIssueField-PROJ-123-summary: 2 times
+  • copyFieldValues-PROJ-124: 1 times
+
+Time range: 2024-01-15T10:30:00Z to 2024-01-15T10:32:15Z
+
+All rate limits were handled automatically with retry logic.
+Your operations completed successfully despite the rate limiting.
+============================================================
+```
+
+### 🎯 Rate Limit Types Handled
+- **Global Pool Limits** (`jira-quota-global-based`): Shared 65,000 points/hour across all tenants
+- **Per-Tenant Limits** (`jira-quota-tenant-based`): Individual tenant quotas
+- **Burst Limits** (`jira-burst-based`): Short-term request spikes
+- **Per-Issue Limits** (`jira-per-issue-on-write`): Write operation limits per issue
+- **Cost-Based Limits** (`jira-cost-based`): Complex operation throttling
+
+### 🔄 Retry Strategy
+- **Max Retries**: 4 attempts (5 total tries)
+- **Base Delay**: 5 seconds
+- **Max Delay**: 30 seconds
+- **Jitter Range**: 70%-130% of calculated delay
+- **Retry-After Priority**: Uses Jira's suggested delays when available
+
+### 💡 Best Practices for Rate Limits
+- **Use Conservative Batch Sizes**: Start with smaller batches for large operations
+- **Monitor Rate Limit Info**: Check the summary after operations
+- **Schedule Heavy Operations**: Run large jobs during off-peak hours
+- **Leverage Performance Settings**: Use `--batch-size` and `--chunk-size` options
+
+**Example with conservative settings**:
+```bash
+# For very large datasets, use smaller batches
+jira-cli copy-issue-fields-values-batch -j "project in (PROJ1, PROJ2)" \
+  -s summary,description -t customfield_10010 \
+  --batch-size 5 --chunk-size 200 --exec
+```
 
 ---
 
@@ -863,12 +988,21 @@ npm link
 3. Ensure the Jira URL is correct
 4. Try the command with verbose logging
 
-#### Issue: "Timeout after 120 seconds"
+#### Issue: "Rate limit exceeded after 4 retries"
 **Solutions**:
-1. Break large operations into smaller batches
-2. Check your network connection to Jira
-3. Consider if Jira instance is under heavy load
-4. Adjust timeout settings in the code
+1. **Reduce batch sizes**: Use smaller `--batch-size` and `--chunk-size` values
+2. **Add delays between operations**: Space out your API calls
+3. **Check Jira instance load**: High server load can trigger more rate limits
+4. **Review operation timing**: Avoid peak usage hours
+5. **Contact Jira admin**: May need quota increase for heavy usage patterns
+
+**Example with conservative settings**:
+```bash
+# Reduce batch processing intensity
+jira-cli copy-issue-fields-values-batch -j "your-jql" \
+  -s source-fields -t target-field \
+  --batch-size 3 --chunk-size 50 --exec
+```
 
 ### 🆘 Getting Help
 1. **Check command help**: `jira-cli --help` or `jira-cli <command> --help`
@@ -975,3 +1109,56 @@ Congratulations on reading through the entire README! 🎉
 **Happy Jira managing!** 🚀
 
 > *"Automation applied to an efficient operation will magnify the efficiency."* - Bill Gates
+
+### 🛡️ Recipe 9: "Understanding and managing rate limits"
+    **Situation**: Getting rate limit warnings or want to optimize for high-volume operations
+    **Solution**:
+    ```bash
+    # 1. Start with a small test to understand your rate limit patterns
+    jira-cli copy-issue-fields-values-batch -j "project = TEST AND created >= -1d" -s summary -t description --exec
+
+    # 2. Check the rate limit information displayed after the operation
+    # Look for patterns in the "Rate limit reasons" section
+
+    # 3. For Global Pool limits (jira-quota-global-based), use conservative settings
+    jira-cli copy-issue-fields-values-batch -j "your-large-query" \
+      -s source-fields -t target-field \
+      --batch-size 5 --chunk-size 100 --exec
+
+    # 4. For Burst limits (jira-burst-based), add more spacing between requests
+    jira-cli copy-issue-fields-values-batch -j "your-query" \
+      -s source-fields -t target-field \
+      --batch-size 3 --chunk-size 50 --exec
+
+    # 5. For Per-Issue limits (jira-per-issue-on-write), process fewer issues in parallel
+    jira-cli copy-issue-fields-values-batch -j "your-query" \
+      -s source-fields -t target-field \
+      --batch-size 1 --chunk-size 25 --exec
+
+    # 6. Monitor the rate limit summary after each operation to optimize settings
+    ```
+
+#### 🔄 `undo-field-operation`
+**What it does**: Reverts field changes by analyzing issue changelog with multiple search methods
+**When to use**: When you need to undo a field copy or update operation
+**Options**:
+    **-j, --jql <jql>**: JQL query to find the issues that were modified (optional)
+    **-i, --issues <issues>**: Issue keys/IDs separated by comma (optional)
+    **-o, --operation-id <operationId>**: Batch operation ID to undo entire batch (optional)
+    **--issue-operation-id <issueOperationId>**: Individual issue operation ID to undo specific issue (optional)
+    **-t, --target-field <fieldId>**: Field ID that was modified and needs to be reverted (required)
+    **--exec**: Execute the undo operation (without this option, only preview what would be undone) (optional)
+**Example**:
+```bash
+# Preview what would be undone using JQL
+jira-cli undo-field-operation -j "project = PROJ AND updated >= -1h" -t description
+
+# Execute undo using batch operation ID
+jira-cli undo-field-operation -o "op_1767876606828646" -t description --exec
+
+# Undo specific issue using issue operation ID
+jira-cli undo-field-operation --issue-operation-id "op_1767876606828647" -t customfield_10001 --exec
+
+# Undo using direct issue keys
+jira-cli undo-field-operation -i "PROJ-123,PROJ-124" -t description --exec
+```

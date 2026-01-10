@@ -9,7 +9,7 @@ const {
     listIssueTypeScreenSchemes, deleteIssueTypeScreenSchemes, listIssueTypeSchemes, deleteIssueTypeSchemes,
     listIssueTypes, deleteIssueTypes, listScreenSchemes, deleteScreenSchemes, listScreens, deleteScreens,
     listFields, getIssue, searchIssues, getIssuesBatch, setIssueFieldValue, setIssueFieldValueBatch,
-    copyItemFieldsValues, copyItemFieldsValuesBatch
+    copyIssueFieldsValues, copyIssueFieldsValuesBatch, undoFieldOperation
 } = require('./src/commands/commands');
 
 const program = new Command();
@@ -24,25 +24,25 @@ program.command('set-config')
     .requiredOption('-u, --url <url>', 'Jira instance URL (e.g., https://yourcompany.atlassian.net)')
     .requiredOption('-e, --email <email>', 'Jira user email')
     .requiredOption('-t, --token <token>', 'Jira API token')
-    .option('-l, --log-email <email>', 'Email para receber logs das operações (opcional)')
-    .option('--smtp-user <user>', 'Email SMTP para envio (ex: seu-email@gmail.com)')
-    .option('--smtp-pass <pass>', 'Senha de app do email SMTP')
+    .option('-l, --log-email <email>', 'Email to receive operation logs (optional)')
+    .option('--smtp-user <user>', 'SMTP email for sending (e.g., your-email@gmail.com)')
+    .option('--smtp-pass <pass>', 'App password for SMTP email')
     .action((options) => {
         saveConfig(options);
     });
 
 program.command('set-email-logs')
-    .description('Configurar email para logs (opcional)')
-    .requiredOption('-l, --log-email <email>', 'Email para receber logs das operações')
-    .requiredOption('--smtp-user <user>', 'Email SMTP para envio (ex: seu-email@gmail.com)')
-    .requiredOption('--smtp-pass <pass>', 'Senha de app do email SMTP')
+    .description('Configure email for logs (optional)')
+    .requiredOption('-l, --log-email <email>', 'Email to receive operation logs')
+    .requiredOption('--smtp-user <user>', 'SMTP email for sending (e.g., your-email@gmail.com)')
+    .requiredOption('--smtp-pass <pass>', 'App password for SMTP email')
     .action((options) => {
         const config = loadConfig();
         config.logEmail = options.logEmail;
         config.smtpUser = options.smtpUser;
         config.smtpPass = options.smtpPass;
         saveConfig(config);
-        console.log('Configuração de email salva com sucesso.');
+        console.log('Email configuration saved successfully.');
     });
 
 program.command('list-project-categories')
@@ -622,12 +622,12 @@ program.command('list-fields')
     });
 
 program.command('cleanup')
-    .description('Limpeza de recursos do Jira. Use --complete para limpeza completa sequencial de recursos não utilizados.')
-    .option('--complete', 'Limpeza completa sequencial: projetos arquivados, workflow schemes, workflows, issue type screen schemes, issue type schemes, screen schemes, screens')
-    .option('--workflows', 'Limpar workflows inativos sem esquemas')
-    .option('--workflow-schemes', 'Limpar workflow schemes inativos')
-    .option('--wf-schemes', 'Alias para --workflow-schemes')
-    .option('--exec', 'Executar a limpeza (sem esta opção apenas lista os itens)')
+    .description('Jira resource cleanup. Use --complete for complete sequential cleanup of unused resources.')
+    .option('--complete', 'Complete sequential cleanup: archived projects, workflow schemes, workflows, issue type screen schemes, issue type schemes, screen schemes, screens')
+    .option('--workflows', 'Clean inactive workflows without schemes')
+    .option('--workflow-schemes', 'Clean inactive workflow schemes')
+    .option('--wf-schemes', 'Alias for --workflow-schemes')
+    .option('--exec', 'Execute cleanup (without this option only lists items)')
     .option('-u, --url <url>', 'Jira instance URL')
     .option('-e, --email <email>', 'Jira user email')
     .option('-t, --token <token>', 'Jira API token')
@@ -652,7 +652,7 @@ program.command('cleanup')
         }
         
         if (!hasWorkflows && !hasSchemes) {
-            console.error('Especifique o tipo de limpeza: --workflows, --workflow-schemes (--wf-schemes) ou --complete');
+            console.error('Specify cleanup type: --workflows, --workflow-schemes (--wf-schemes) or --complete');
             return;
         }
         try {
@@ -758,8 +758,9 @@ program.command('set-issue-field-value')
     .requiredOption('-i, --issue <issueIdOrKey>', 'Issue ID or key')
     .requiredOption('-f, --field <fieldId>', 'Field ID (e.g., summary, description, customfield_10001)')
     .requiredOption('-v, --value <value>', 'New value for the field')
-    .option('--dry-run', 'Preview the change without executing')
-    .option('--confirm', 'Ask for confirmation before executing')
+    .option('--append', 'Append to existing value instead of replacing')
+    .option('--separator <separator>', 'Separator to use when appending (default: "\\n\\n")')
+    .option('--exec', 'Execute the update (without this option, only preview what would be updated)')
     .option('-u, --url <url>', 'Jira instance URL')
     .option('-e, --email <email>', 'Jira user email')
     .option('-t, --token <token>', 'Jira API token')
@@ -771,8 +772,9 @@ program.command('set-issue-field-value')
         }
         try {
             const apiOptions = {};
-            if (options.dryRun) apiOptions.dryRun = true;
-            if (options.confirm) apiOptions.confirm = true;
+            if (options.append) apiOptions.append = true;
+            if (options.separator) apiOptions.separator = options.separator;
+            if (options.exec) apiOptions.exec = true;
             
             await setIssueFieldValue(config, options.issue, options.field, options.value, apiOptions);
         } catch (error) {
@@ -785,8 +787,9 @@ program.command('set-issue-field-value-batch')
     .requiredOption('-i, --issues <issues>', 'Issue IDs or keys separated by comma')
     .requiredOption('-f, --field <fieldId>', 'Field ID to update')
     .requiredOption('-v, --value <value>', 'New value for the field')
-    .option('--dry-run', 'Preview the change without executing')
-    .option('--confirm', 'Ask for confirmation before executing')
+    .option('--append', 'Append to existing value instead of replacing')
+    .option('--separator <separator>', 'Separator to use when appending (default: "\\n\\n")')
+    .option('--exec', 'Execute the update (without this option, only preview what would be updated)')
     .option('-u, --url <url>', 'Jira instance URL')
     .option('-e, --email <email>', 'Jira user email')
     .option('-t, --token <token>', 'Jira API token')
@@ -799,8 +802,9 @@ program.command('set-issue-field-value-batch')
         try {
             const issueIdsOrKeys = options.issues.split(',').map(id => id.trim());
             const apiOptions = {};
-            if (options.dryRun) apiOptions.dryRun = true;
-            if (options.confirm) apiOptions.confirm = true;
+            if (options.append) apiOptions.append = true;
+            if (options.separator) apiOptions.separator = options.separator;
+            if (options.exec) apiOptions.exec = true;
             
             await setIssueFieldValueBatch(config, issueIdsOrKeys, options.field, options.value, apiOptions);
         } catch (error) {
@@ -808,15 +812,15 @@ program.command('set-issue-field-value-batch')
         }
     });
 
-program.command('copy-item-fields-values')
+program.command('copy-issue-fields-values')
     .description('Copy field value from one field to another within the same issue')
     .requiredOption('-i, --issue <issueIdOrKey>', 'Issue ID or key')
-    .requiredOption('-s, --source-field <sourceFieldId>', 'Source field ID')
+    .requiredOption('-s, --source-fields <sourceFields>', 'Source field IDs separated by comma')
     .requiredOption('-t, --target-field <targetFieldId>', 'Target field ID')
     .option('--append', 'Append to existing value instead of replacing')
     .option('--separator <separator>', 'Separator to use when appending (default: "\\n\\n")')
-    .option('--dry-run', 'Preview the change without executing')
-    .option('--confirm', 'Ask for confirmation before executing')
+    .option('--field-separator <fieldSeparator>', 'Separator between multiple source fields (default: "\\n\\n")')
+    .option('--exec', 'Execute the copy (without this option, only preview what would be copied)')
     .option('-u, --url <url>', 'Jira instance URL')
     .option('-e, --email <email>', 'Jira user email')
     .option('-t, --token <token>', 'Jira API token')
@@ -827,27 +831,31 @@ program.command('copy-item-fields-values')
             return;
         }
         try {
+            const sourceFields = options.sourceFields.split(',').map(field => field.trim());
             const apiOptions = {};
             if (options.append) apiOptions.append = true;
             if (options.separator) apiOptions.separator = options.separator;
-            if (options.dryRun) apiOptions.dryRun = true;
-            if (options.confirm) apiOptions.confirm = true;
+            if (options.fieldSeparator) apiOptions.fieldSeparator = options.fieldSeparator;
+            if (options.exec) apiOptions.exec = true;
             
-            await copyItemFieldsValues(config, options.issue, options.sourceField, options.targetField, apiOptions);
+            await copyIssueFieldsValues(config, options.issue, sourceFields, options.targetField, apiOptions);
         } catch (error) {
             console.error('Error copying field values:', error.response ? error.response.data : error.message);
         }
     });
 
-program.command('copy-item-fields-values-batch')
-    .description('Copy field values for multiple issues')
-    .requiredOption('-i, --issues <issues>', 'Issue IDs or keys separated by comma')
-    .requiredOption('-s, --source-field <sourceFieldId>', 'Source field ID')
+program.command('copy-issue-fields-values-batch')
+    .description('Copy field values for multiple issues with performance optimizations')
+    .option('-i, --issues <issues>', 'Issue IDs or keys separated by comma')
+    .option('-j, --jql <jql>', 'JQL query to find issues')
+    .requiredOption('-s, --source-fields <sourceFields>', 'Source field IDs separated by comma')
     .requiredOption('-t, --target-field <targetFieldId>', 'Target field ID')
     .option('--append', 'Append to existing value instead of replacing')
     .option('--separator <separator>', 'Separator to use when appending (default: "\\n\\n")')
-    .option('--dry-run', 'Preview the change without executing')
-    .option('--confirm', 'Ask for confirmation before executing')
+    .option('--field-separator <fieldSeparator>', 'Separator between multiple source fields (default: "\\n\\n")')
+    .option('--batch-size <batchSize>', 'Number of issues to process in parallel (default: 10)', '10')
+    .option('--chunk-size <chunkSize>', 'Number of issues to process per chunk (default: 100)', '100')
+    .option('--exec', 'Execute the copy (without this option, only preview what would be copied)')
     .option('-u, --url <url>', 'Jira instance URL')
     .option('-e, --email <email>', 'Jira user email')
     .option('-t, --token <token>', 'Jira API token')
@@ -857,17 +865,90 @@ program.command('copy-item-fields-values-batch')
             console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
             return;
         }
+        
+        if (!options.issues && !options.jql) {
+            console.error('Must specify either --issues or --jql.');
+            return;
+        }
+        
+        if (options.issues && options.jql) {
+            console.error('Cannot specify both --issues and --jql. Choose one.');
+            return;
+        }
+        
         try {
-            const issueIdsOrKeys = options.issues.split(',').map(id => id.trim());
-            const apiOptions = {};
+            let issueIdsOrKeys;
+            
+            if (options.issues) {
+                issueIdsOrKeys = options.issues.split(',').map(id => id.trim());
+            }
+            
+            const sourceFields = options.sourceFields.split(',').map(field => field.trim());
+            const apiOptions = {
+                batchSize: parseInt(options.batchSize),
+                chunkSize: parseInt(options.chunkSize)
+            };
+            
+            if (options.jql) apiOptions.jql = options.jql;
             if (options.append) apiOptions.append = true;
             if (options.separator) apiOptions.separator = options.separator;
-            if (options.dryRun) apiOptions.dryRun = true;
-            if (options.confirm) apiOptions.confirm = true;
+            if (options.fieldSeparator) apiOptions.fieldSeparator = options.fieldSeparator;
+            if (options.exec) apiOptions.exec = true;
             
-            await copyItemFieldsValuesBatch(config, issueIdsOrKeys, options.sourceField, options.targetField, apiOptions);
+            await copyIssueFieldsValuesBatch(config, issueIdsOrKeys, sourceFields, options.targetField, apiOptions);
         } catch (error) {
             console.error('Error copying field values batch:', error.response ? error.response.data : error.message);
+        }
+    });
+
+program.command('undo-field-operation')
+    .description('Undo field operation by analyzing changelog')
+    .option('-j, --jql <jql>', 'JQL query to find the issues that were modified')
+    .option('-i, --issues <issues>', 'Issue IDs or keys separated by comma (e.g., PROJ-123,PROJ-124)')
+    .option('-o, --operation-id <operationId>', 'Batch operation ID to find issues modified by that operation')
+    .option('--issue-operation-id <issueOperationId>', 'Issue operation ID to find specific issue modified by that operation')
+    .requiredOption('-t, --target-field <fieldId>', 'Field ID that was modified and needs to be reverted')
+    .option('--exec', 'Execute the undo operation (without this option, only preview what would be undone)')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('--token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!config.url || !config.email || !config.token) {
+            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
+            return;
+        }
+        
+        const searchOptions = [options.jql, options.issues, options.operationId, options.issueOperationId].filter(Boolean);
+        if (searchOptions.length === 0) {
+            console.error('Must specify one of: --jql, --issues, --operation-id, or --issue-operation-id.');
+            return;
+        }
+        
+        if (searchOptions.length > 1) {
+            console.error('Cannot specify multiple search methods. Choose one: --jql, --issues, --operation-id, or --issue-operation-id.');
+            return;
+        }
+        
+        try {
+            const apiOptions = {
+                targetField: options.targetField,
+                exec: options.exec || false
+            };
+            
+            if (options.jql) {
+                apiOptions.jql = options.jql;
+            } else if (options.issues) {
+                apiOptions.issues = options.issues.split(',').map(id => id.trim());
+            } else if (options.operationId) {
+                apiOptions.operationId = options.operationId;
+            } else if (options.issueOperationId) {
+                apiOptions.issueOperationId = options.issueOperationId;
+            }
+            
+            await undoFieldOperation(config, apiOptions);
+        } catch (error) {
+            console.error('Error undoing field operation:', error.response ? error.response.data : error.message);
         }
     });
 
