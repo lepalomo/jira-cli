@@ -2,6 +2,7 @@
 
 const { Command } = require('commander');
 const { loadConfig, saveConfig } = require('./src/commands/config');
+const { validateConfig } = require('./src/utils/configCheck');
 const {
     listProjects, listCategories, archiveProject, archiveProjects, updateProjectName, updateProjectCategory,
     updateProjectsCategory, listProjectsByCategory, deleteProjects, listWorkflows, deleteWorkflows,
@@ -52,10 +53,7 @@ program.command('list-project-categories')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         try {
             await listCategories(config);
         } catch (error) {
@@ -71,10 +69,7 @@ program.command('list-projects-by-category')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         try {
             await listProjectsByCategory(config, options.category);
         } catch (error) {
@@ -89,10 +84,7 @@ program.command('list-projects')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         try {
             await listProjects(config);
         } catch (error) {
@@ -108,10 +100,7 @@ program.command('archive-project')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         try {
             await archiveProject(config, options.key);
         } catch (error) {
@@ -127,10 +116,7 @@ program.command('archive-projects')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         const projectKeys = options.keys.split(',').map(key => key.trim());
         try {
             await archiveProjects(config, projectKeys);
@@ -148,10 +134,7 @@ program.command('update-project-name')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         try {
             await updateProjectName(config, options.key, options.name);
         } catch (error) {
@@ -168,10 +151,7 @@ program.command('update-project-category')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         try {
             await updateProjectCategory(config, options.key, options.category);
         } catch (error) {
@@ -188,10 +168,7 @@ program.command('update-projects-category')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         const projectKeys = options.keys.split(',').map(key => key.trim());
         try {
             await updateProjectsCategory(config, projectKeys, options.category);
@@ -208,10 +185,7 @@ program.command('delete-projects')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         const projectKeys = options.keys.split(',').map(key => key.trim());
         try {
             await deleteProjects(config, projectKeys);
@@ -227,10 +201,7 @@ program.command('list-workflow-schemes')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         try {
             await listWorkflowSchemes(config);
         } catch (error) {
@@ -248,10 +219,7 @@ program.command('delete-workflow-schemes')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         
         if (options.unused && options.ids) {
             console.error('Cannot specify both --ids and --unused. Choose one.');
@@ -284,10 +252,7 @@ program.command('list-workflows')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         if (options.active && options.inactive) {
             console.error('Cannot specify both --active and --inactive. Choose one.');
             return;
@@ -314,10 +279,7 @@ program.command('delete-workflows')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         
         if (options.unused && options.ids) {
             console.error('Cannot specify both --ids and --unused. Choose one.');
@@ -348,10 +310,7 @@ program.command('list-issue-type-screen-schemes')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         try {
             await listIssueTypeScreenSchemes(config);
         } catch (error) {
@@ -369,10 +328,7 @@ program.command('delete-issue-type-screen-schemes')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         
         if (options.unused && options.ids) {
             console.error('Cannot specify both --ids and --unused. Choose one.');
@@ -403,10 +359,7 @@ program.command('list-issue-type-schemes')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         try {
             await listIssueTypeSchemes(config);
         } catch (error) {
@@ -424,10 +377,7 @@ program.command('delete-issue-type-schemes')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         
         if (options.unused && options.ids) {
             console.error('Cannot specify both --ids and --unused. Choose one.');
@@ -458,10 +408,7 @@ program.command('list-issue-types')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         try {
             await listIssueTypes(config);
         } catch (error) {
@@ -477,10 +424,7 @@ program.command('delete-issue-types')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         const issueTypeIds = options.ids.split(',').map(id => id.trim());
         try {
             await deleteIssueTypes(config, issueTypeIds);
@@ -496,10 +440,7 @@ program.command('list-screen-schemes')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         try {
             await listScreenSchemes(config);
         } catch (error) {
@@ -517,10 +458,7 @@ program.command('delete-screen-schemes')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         
         if (options.unused && options.ids) {
             console.error('Cannot specify both --ids and --unused. Choose one.');
@@ -552,10 +490,7 @@ program.command('list-screens')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         try {
             await listScreens(config, options.screenSchemeId);
         } catch (error) {
@@ -571,10 +506,7 @@ program.command('delete-screens')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         const screenIds = options.ids.split(',').map(id => id.trim());
         try {
             await deleteScreens(config, screenIds);
@@ -598,10 +530,7 @@ program.command('list-fields')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         
         // Parse array parameters
         const parsedOptions = {};
@@ -633,10 +562,7 @@ program.command('cleanup')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         const hasComplete = options.complete;
         const hasWorkflows = options.workflows;
         const hasSchemes = options['workflow-schemes'] || options['wf-schemes'];
@@ -679,10 +605,7 @@ program.command('get-issue')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         try {
             const apiOptions = {};
             if (options.fields) apiOptions.fields = options.fields;
@@ -708,10 +631,7 @@ program.command('search-issues')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         try {
             const apiOptions = {
                 startAt: parseInt(options.startAt),
@@ -737,10 +657,7 @@ program.command('get-issues-batch')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         try {
             const issueIdsOrKeys = options.issues.split(',').map(id => id.trim());
             const apiOptions = {};
@@ -766,10 +683,7 @@ program.command('set-issue-field-value')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         try {
             const apiOptions = {};
             if (options.append) apiOptions.append = true;
@@ -795,10 +709,7 @@ program.command('set-issue-field-value-batch')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         try {
             const issueIdsOrKeys = options.issues.split(',').map(id => id.trim());
             const apiOptions = {};
@@ -826,10 +737,7 @@ program.command('copy-issue-fields-values')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         try {
             const sourceFields = options.sourceFields.split(',').map(field => field.trim());
             const apiOptions = {};
@@ -861,10 +769,7 @@ program.command('copy-issue-fields-values-batch')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         
         if (!options.issues && !options.jql) {
             console.error('Must specify either --issues or --jql.');
@@ -914,10 +819,7 @@ program.command('undo-field-operation')
     .option('--token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
-        if (!config.url || !config.email || !config.token) {
-            console.error('Missing configuration. Use "set-config" to save credentials or provide options.');
-            return;
-        }
+        if (!validateConfig(config)) return;
         
         const searchOptions = [options.jql, options.issues, options.operationId, options.issueOperationId].filter(Boolean);
         if (searchOptions.length === 0) {
