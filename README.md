@@ -117,6 +117,112 @@ Get up and running in **under 5 minutes**! Just follow these simple steps:
 
 ---
 
+## 🔒 Security & Privacy - Your Data is Safe
+
+### 🛡️ Local-Only Storage
+Jira CLI prioritizes your security by storing all credentials **locally on your machine only**:
+
+- **📁 Local Storage**: All configuration stored in `~/.jira-cli/config.json`
+- **🔐 Encrypted Credentials**: API tokens are encrypted before storage
+- **🚫 No Cloud Storage**: Zero data transmission to external servers
+- **🏠 Your Control**: You own and control all your data
+
+### 🔑 API Token Requirements
+
+Jira CLI uses **Atlassian API Tokens** for secure authentication. Create yours at:
+**👉 [Atlassian API Token Management](https://id.atlassian.com/manage-profile/security/api-tokens)**
+
+#### Required Permissions by Command Group:
+
+| Command Group | Required Jira Permissions | Scope |
+|---------------|---------------------------|-------|
+| **🏗️ Project Management** | `ADMINISTER_PROJECTS` | Global or Project-specific |
+| **📊 Workflow Operations** | `ADMINISTER` | Global (Jira Administrator) |
+| **🎫 Issue Type Management** | `ADMINISTER` | Global (Jira Administrator) |
+| **🎫 Issue Operations** | `BROWSE_PROJECTS`, `EDIT_ISSUES` | Project-specific |
+| **📋 Field Operations** | `BROWSE_PROJECTS`, `EDIT_ISSUES` | Project-specific |
+| **🔧 Configuration** | None (local only) | N/A |
+
+### 🎯 Minimum Permission Strategy
+
+#### For **Project Managers** (Recommended):
+```
+✅ Project Administrator role on specific projects
+✅ Can manage: Projects, Issues, Fields within assigned projects
+❌ Cannot manage: Global workflows, issue types, system settings
+```
+
+#### For **Jira Administrators** (Full Access):
+```
+✅ Global Jira Administrator role
+✅ Can manage: Everything including workflows, issue types, global settings
+✅ Required for: Cleanup operations, workflow management
+```
+
+### 🔐 Security Best Practices
+
+#### API Token Management:
+- **🔄 Rotate Regularly**: Change tokens every 90 days
+- **📝 Descriptive Names**: Use clear token names like "Jira-CLI-Production"
+- **⏰ Monitor Usage**: Check token activity in Atlassian account
+- **🗑️ Revoke Unused**: Remove tokens you no longer need
+
+#### Local Security:
+- **🔒 File Permissions**: Config file is readable only by your user
+- **💾 Secure Backups**: Store config backups in password managers
+- **🚫 Version Control**: Never commit config files to repositories
+- **🖥️ Shared Machines**: Use separate tokens for shared environments
+
+### 🌐 Network Security
+
+- **🔐 HTTPS Only**: All API calls use encrypted HTTPS connections
+- **🎯 Direct Connection**: Communicates directly with your Jira instance
+- **🚫 No Proxies**: No data passes through third-party services
+- **📊 Rate Limiting**: Built-in respect for Atlassian's API limits
+
+### 🔍 Data Privacy
+
+#### What Jira CLI Accesses:
+- **✅ Project Information**: Names, keys, categories (for management)
+- **✅ Issue Data**: Only fields you specify in commands
+- **✅ Configuration Data**: Workflows, schemes, screens (for cleanup)
+- **❌ Personal Data**: No access to user profiles or personal information
+
+#### What Jira CLI Never Does:
+- **❌ Data Collection**: No telemetry or usage analytics
+- **❌ External Transmission**: No data sent outside your Jira instance
+- **❌ Persistent Logging**: No permanent log files created
+- **❌ Credential Sharing**: Tokens never leave your local machine
+
+### 🚨 Security Checklist
+
+Before using Jira CLI in production:
+
+- [ ] **API Token Created** with appropriate permissions
+- [ ] **Token Name** is descriptive and trackable
+- [ ] **Config File** permissions are user-only (`chmod 600`)
+- [ ] **Backup Strategy** for config file is in place
+- [ ] **Network Access** to Jira instance is confirmed
+- [ ] **Test Commands** run successfully on non-production data
+
+### 🆘 Security Incident Response
+
+If you suspect token compromise:
+
+1. **🚨 Immediate**: Revoke the token at [Atlassian Security](https://id.atlassian.com/manage-profile/security/api-tokens)
+2. **🔍 Audit**: Check Jira audit logs for suspicious activity
+3. **🔄 Rotate**: Create a new token with a different name
+4. **📝 Update**: Reconfigure Jira CLI with the new token
+5. **🔒 Secure**: Review and strengthen local security practices
+
+### 📚 Additional Security Resources
+
+- **[Atlassian Security Best Practices](https://www.atlassian.com/trust/security)**
+- **[API Token Security Guide](https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/)**
+- **[Jira Permissions Overview](https://support.atlassian.com/jira-cloud-administration/docs/manage-project-permissions/)**
+
+---
+
 ## ⚡ Your First 5 Minutes with Jira CLI
 
 Let's get you connected to Jira and run your first command!
