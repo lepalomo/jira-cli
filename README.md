@@ -276,10 +276,18 @@ Commands for managing Jira projects
 #### 🔍 `list-projects`
 **What it does**: Shows all active projects in your Jira instance
 **When to use**: When you need to see what projects are available
+**Options**:
+    **-c, --category <categoryId>**: Filter by project category ID (optional)
 **Example**:
 ```bash
+# List all projects
 jira-cli list-projects
+
+# List projects with configuration override
 jira-cli list-projects -u https://test.atlassian.net
+
+# List projects in a specific category
+jira-cli list-projects -c 10010
 ```
 
 #### 📦 `archive-project`
@@ -362,6 +370,59 @@ jira-cli update-projects-category -k PROJ1,PROJ2,PROJ3 -c 10010
 ```bash
 jira-cli delete-projects -k PROJ1,PROJ2
 ```
+
+### 🎛️ Field Configuration Schemes
+Commands for managing field configuration schemes and their project associations
+
+#### 📋 `list-field-configuration-schemes`
+**What it does**: Lists field configuration schemes and the projects that use them
+**When to use**: When you need to audit field configuration scheme assignments or find which projects use specific schemes
+**Options**:
+    **--start-at <startAt>**: Page offset (default: 0) (optional)
+    **--max-results <maxResults>**: Items per page (default: 50) (optional)
+    **--project-id <projectId>**: Filter by project ID (optional)
+    **-c, --category <categoryId>**: Filter by project category ID (optional)
+**Example**:
+```bash
+# List all field configuration schemes
+jira-cli list-field-configuration-schemes
+
+# List with pagination
+jira-cli list-field-configuration-schemes --start-at 0 --max-results 25
+
+# List schemes for a specific project
+jira-cli list-field-configuration-schemes --project-id 10000
+
+# List schemes used by projects in a specific category
+jira-cli list-field-configuration-schemes -c 10010
+```
+
+#### 🔗 `assign-field-configuration-scheme`
+**What it does**: Assigns a field configuration scheme to one or more projects or all projects in a category
+**When to use**: When you need to apply a field configuration scheme to projects or standardize across a category
+**Options**:
+    **-k, --keys <keys>**: Project keys separated by comma (e.g., PROJ1,PROJ2,PROJ3) (required unless using -c)
+    **-c, --category <categoryId>**: Category ID to assign scheme to all projects in that category (required unless using -k)
+    **-s, --scheme <schemeId>**: Field configuration scheme ID (use "default" for default scheme) (required)
+    **--exec**: Execute assignment (without this option, only preview what would be assigned) (optional)
+**Example**:
+```bash
+# Preview assignment to specific projects
+jira-cli assign-field-configuration-scheme -k PROJ1,PROJ2 -s 10000
+
+# Execute assignment to specific projects
+jira-cli assign-field-configuration-scheme -k PROJ1,PROJ2 -s 10000 --exec
+
+# Assign default scheme to a project
+jira-cli assign-field-configuration-scheme -k PROJ1 -s default --exec
+
+# Preview assignment to all projects in a category
+jira-cli assign-field-configuration-scheme -c 10010 -s 10000
+
+# Execute assignment to all projects in a category
+jira-cli assign-field-configuration-scheme -c 10010 -s 10000 --exec
+```
+
 
 ### 📊 Workflow Operations
 Commands for managing workflows and schemes
@@ -446,11 +507,40 @@ jira-cli list-issue-types
 ```
 
 #### 🖥️ `list-screen-schemes`
-**What it does**: Shows screen schemes
-**When to use**: When managing screen configurations
+**What it does**: Shows screen schemes and the projects that use them
+**When to use**: When managing screen configurations or auditing screen scheme assignments
+**Options**:
+    **-c, --category <categoryId>**: Filter by project category ID (optional)
 **Example**:
 ```bash
+# List all screen schemes
 jira-cli list-screen-schemes
+
+# List screen schemes used by projects in a specific category
+jira-cli list-screen-schemes -c 10010
+```
+
+#### 🔗 `assign-screen-scheme`
+**What it does**: Assigns a screen scheme to one or more projects or all projects in a category
+**When to use**: When you need to apply a screen scheme to projects or standardize across a category
+**Options**:
+    **-k, --keys <keys>**: Project keys separated by comma (e.g., PROJ1,PROJ2,PROJ3) (required unless using -c)
+    **-c, --category <categoryId>**: Category ID to assign scheme to all projects in that category (required unless using -k)
+    **-s, --scheme <schemeId>**: Screen scheme ID (required)
+    **--exec**: Execute assignment (without this option, only preview what would be assigned) (optional)
+**Example**:
+```bash
+# Preview assignment to specific projects
+jira-cli assign-screen-scheme -k PROJ1,PROJ2 -s 10001
+
+# Execute assignment to specific projects
+jira-cli assign-screen-scheme -k PROJ1,PROJ2 -s 10001 --exec
+
+# Preview assignment to all projects in a category
+jira-cli assign-screen-scheme -c 10010 -s 10001
+
+# Execute assignment to all projects in a category
+jira-cli assign-screen-scheme -c 10010 -s 10001 --exec
 ```
 
 #### 🖥️ `list-screens`
@@ -1242,6 +1332,46 @@ Congratulations on reading through the entire README! 🎉
       --batch-size 1 --chunk-size 25 --exec
 
     # 6. Monitor the rate limit summary after each operation to optimize settings
+    ```
+
+### 🎛️ Recipe 11: "Managing field configuration schemes across projects"
+    **Situation**: Need to standardize field configurations across multiple projects or project categories
+    **Solution**:
+    ```bash
+    # 1. First, audit current field configuration scheme assignments
+    jira-cli list-field-configuration-schemes
+
+    # 2. See which schemes are used by projects in a specific category
+    jira-cli list-field-configuration-schemes -c 10010
+
+    # 3. Preview assigning a standard scheme to all projects in a category
+    jira-cli assign-field-configuration-scheme -c 10010 -s 10000
+
+    # 4. Execute the assignment to standardize field configuration
+    jira-cli assign-field-configuration-scheme -c 10010 -s 10000 --exec
+
+    # 5. For individual project assignments, use the batch command
+    jira-cli assign-field-configuration-scheme -k PROJ1,PROJ2,PROJ3 -s 10001 --exec
+
+    # 6. Verify the assignments
+    jira-cli list-field-configuration-schemes --project-id 10000
+    ```
+
+### 🖥️ Recipe 12: "Standardizing screen schemes by project category"
+    **Situation**: Need to apply consistent screen configurations to all projects in a category
+    **Solution**:
+    ```bash
+    # 1. Audit current screen scheme usage by category
+    jira-cli list-screen-schemes -c 10010
+
+    # 2. Preview assigning a standard screen scheme to the category
+    jira-cli assign-screen-scheme -c 10010 -s 10001
+
+    # 3. Execute the assignment
+    jira-cli assign-screen-scheme -c 10010 -s 10001 --exec
+
+    # 4. Verify the changes by checking projects in the category
+    jira-cli list-projects-by-category -c 10010
     ```
 
 #### 🔄 `undo-field-operation`

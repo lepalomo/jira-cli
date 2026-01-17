@@ -2,6 +2,7 @@ const JiraApi = require('../services/jiraApi');
 const { createProjectsTable } = require('../utils/table');
 const Table = require('cli-table3');
 const { applyTimeoutToObject } = require('../utils/timeout');
+const { getErrorMessage, getErrorCategory, formatBatchResults, logOperationSummary } = require('../utils/errorHandler');
 
 
 async function listProjects(config) {
@@ -61,26 +62,96 @@ async function archiveProjects(config, projectKeys) {
     const jira = new JiraApi(config.url, config.email, config.token);
     const results = await jira.archiveProjects(projectKeys);
 
-    results.forEach(result => {
-        if (result.success) {
-            console.log(`✓ Project ${result.key} archived successfully.`);
-        } else {
-            console.log(`✗ Error archiving project ${result.key}: ${result.error}`);
+    // Transform results to include proper error messages and categories
+    const enhancedResults = results.map(result => {
+        const enhancedResult = { ...result };
+        if (!result.success && result.error) {
+            enhancedResult.error = getErrorMessage(result.error);
+            enhancedResult.errorCategory = getErrorCategory(result.error);
         }
+        return enhancedResult;
     });
+
+    // Format and display batch results using the new error handler
+    const formattedResults = formatBatchResults(enhancedResults);
+
+    console.log(`\n📊 BATCH ARCHIVE OPERATION RESULTS:`);
+    console.log(formattedResults);
+
+    // Log operation summary with detailed statistics
+    const operationLogger = require('../utils/operationLogger');
+    const operationId = operationLogger.generateOperationId();
+    logOperationSummary(operationId, enhancedResults);
+
+    // Display detailed error information for failures
+    const failureResults = enhancedResults.filter(r => !r.success);
+    if (failureResults.length > 0) {
+        console.log(`\n🔍 DETAILED ERROR ANALYSIS:`);
+        console.log('='.repeat(60));
+
+        failureResults.forEach((result, index) => {
+            console.log(`\n${index + 1}. Project: ${result.key}`);
+            console.log(`   Error: ${result.error}`);
+            console.log(`   Category: ${result.errorCategory || 'Unknown'}`);
+
+            // Provide troubleshooting suggestions based on error category
+            if (result.errorCategory === 'permission') {
+                console.log(`   💡 Suggestion: Check if you have 'Archive Projects' permission`);
+            } else if (result.errorCategory === 'not_found') {
+                console.log(`   💡 Suggestion: Verify the project key '${result.key}' exists`);
+            } else if (result.errorCategory === 'validation') {
+                console.log(`   💡 Suggestion: Project may already be archived or cannot be archived`);
+            }
+        });
+    }
 }
 
 async function updateProjectsCategory(config, projectKeys, categoryId) {
     const jira = new JiraApi(config.url, config.email, config.token);
     const results = await jira.updateProjectsCategory(projectKeys, categoryId);
 
-    results.forEach(result => {
-        if (result.success) {
-            console.log(`✓ Project ${result.key} category changed successfully.`);
-        } else {
-            console.log(`✗ Error changing project ${result.key} category: ${result.error}`);
+    // Transform results to include proper error messages and categories
+    const enhancedResults = results.map(result => {
+        const enhancedResult = { ...result };
+        if (!result.success && result.error) {
+            enhancedResult.error = getErrorMessage(result.error);
+            enhancedResult.errorCategory = getErrorCategory(result.error);
         }
+        return enhancedResult;
     });
+
+    // Format and display batch results using the new error handler
+    const formattedResults = formatBatchResults(enhancedResults);
+
+    console.log(`\n📊 BATCH CATEGORY UPDATE OPERATION RESULTS:`);
+    console.log(formattedResults);
+
+    // Log operation summary with detailed statistics
+    const operationLogger = require('../utils/operationLogger');
+    const operationId = operationLogger.generateOperationId();
+    logOperationSummary(operationId, enhancedResults);
+
+    // Display detailed error information for failures
+    const failureResults = enhancedResults.filter(r => !r.success);
+    if (failureResults.length > 0) {
+        console.log(`\n🔍 DETAILED ERROR ANALYSIS:`);
+        console.log('='.repeat(60));
+
+        failureResults.forEach((result, index) => {
+            console.log(`\n${index + 1}. Project: ${result.key}`);
+            console.log(`   Error: ${result.error}`);
+            console.log(`   Category: ${result.errorCategory || 'Unknown'}`);
+
+            // Provide troubleshooting suggestions based on error category
+            if (result.errorCategory === 'permission') {
+                console.log(`   💡 Suggestion: Check if you have 'Manage Projects' permission`);
+            } else if (result.errorCategory === 'not_found') {
+                console.log(`   💡 Suggestion: Verify the project key '${result.key}' or category ID '${categoryId}' exists`);
+            } else if (result.errorCategory === 'validation') {
+                console.log(`   💡 Suggestion: Category may not be compatible with project type`);
+            }
+        });
+    }
 }
 
 async function listProjectsByCategory(config, categoryId) {
@@ -102,13 +173,48 @@ async function deleteProjects(config, projectKeys) {
     const jira = new JiraApi(config.url, config.email, config.token);
     const results = await jira.deleteProjects(projectKeys);
 
-    results.forEach(result => {
-        if (result.success) {
-            console.log(`✓ Project ${result.key} deleted successfully.`);
-        } else {
-            console.log(`✗ Error deleting project ${result.key}: ${result.error}`);
+    // Transform results to include proper error messages and categories
+    const enhancedResults = results.map(result => {
+        const enhancedResult = { ...result };
+        if (!result.success && result.error) {
+            enhancedResult.error = getErrorMessage(result.error);
+            enhancedResult.errorCategory = getErrorCategory(result.error);
         }
+        return enhancedResult;
     });
+
+    // Format and display batch results using the new error handler
+    const formattedResults = formatBatchResults(enhancedResults);
+
+    console.log(`\n📊 BATCH DELETE OPERATION RESULTS:`);
+    console.log(formattedResults);
+
+    // Log operation summary with detailed statistics
+    const operationLogger = require('../utils/operationLogger');
+    const operationId = operationLogger.generateOperationId();
+    logOperationSummary(operationId, enhancedResults);
+
+    // Display detailed error information for failures
+    const failureResults = enhancedResults.filter(r => !r.success);
+    if (failureResults.length > 0) {
+        console.log(`\n🔍 DETAILED ERROR ANALYSIS:`);
+        console.log('='.repeat(60));
+
+        failureResults.forEach((result, index) => {
+            console.log(`\n${index + 1}. Project: ${result.key}`);
+            console.log(`   Error: ${result.error}`);
+            console.log(`   Category: ${result.errorCategory || 'Unknown'}`);
+
+            // Provide troubleshooting suggestions based on error category
+            if (result.errorCategory === 'permission') {
+                console.log(`   💡 Suggestion: Check if you have 'Delete Projects' permission`);
+            } else if (result.errorCategory === 'not_found') {
+                console.log(`   💡 Suggestion: Verify the project key '${result.key}' exists`);
+            } else if (result.errorCategory === 'validation') {
+                console.log(`   💡 Suggestion: Project may have dependencies preventing deletion`);
+            }
+        });
+    }
 }
 
 async function listWorkflows(config, isActive) {
@@ -209,13 +315,48 @@ async function deleteWorkflows(config, workflowIds, options = {}) {
         // Original behavior: delete specific workflows
         const results = await jira.deleteWorkflows(workflowIds);
 
-        results.forEach(result => {
-            if (result.success) {
-                console.log(`✓ Workflow ${result.id} deleted successfully.`);
-            } else {
-                console.log(`✗ Error deleting workflow ${result.id}: ${result.error}`);
+        // Transform results to include proper error messages and categories
+        const enhancedResults = results.map(result => {
+            const enhancedResult = { ...result };
+            if (!result.success && result.error) {
+                enhancedResult.error = getErrorMessage(result.error);
+                enhancedResult.errorCategory = getErrorCategory(result.error);
             }
+            return enhancedResult;
         });
+
+        // Format and display batch results using the new error handler
+        const formattedResults = formatBatchResults(enhancedResults);
+
+        console.log(`\n📊 BATCH WORKFLOW DELETE OPERATION RESULTS:`);
+        console.log(formattedResults);
+
+        // Log operation summary with detailed statistics
+        const operationLogger = require('../utils/operationLogger');
+        const operationId = operationLogger.generateOperationId();
+        logOperationSummary(operationId, enhancedResults);
+
+        // Display detailed error information for failures
+        const failureResults = enhancedResults.filter(r => !r.success);
+        if (failureResults.length > 0) {
+            console.log(`\n🔍 DETAILED ERROR ANALYSIS:`);
+            console.log('='.repeat(60));
+
+            failureResults.forEach((result, index) => {
+                console.log(`\n${index + 1}. Workflow: ${result.id}`);
+                console.log(`   Error: ${result.error}`);
+                console.log(`   Category: ${result.errorCategory || 'Unknown'}`);
+
+                // Provide troubleshooting suggestions based on error category
+                if (result.errorCategory === 'permission') {
+                    console.log(`   💡 Suggestion: Check if you have 'Manage Workflows' permission`);
+                } else if (result.errorCategory === 'not_found') {
+                    console.log(`   💡 Suggestion: Verify the workflow ID '${result.id}' exists`);
+                } else if (result.errorCategory === 'validation') {
+                    console.log(`   💡 Suggestion: Workflow may be in use or has dependencies`);
+                }
+            });
+        }
     }
 }
 
@@ -297,13 +438,48 @@ async function deleteWorkflowSchemes(config, schemeIds, options = {}) {
         // Original behavior: delete specific schemes
         const results = await jira.deleteWorkflowSchemes(schemeIds);
 
-        results.forEach(result => {
-            if (result.success) {
-                console.log(`✓ Workflow scheme ${result.id} deleted successfully.`);
-            } else {
-                console.log(`✗ Error deleting workflow scheme ${result.id}: ${result.error}`);
+        // Transform results to include proper error messages and categories
+        const enhancedResults = results.map(result => {
+            const enhancedResult = { ...result };
+            if (!result.success && result.error) {
+                enhancedResult.error = getErrorMessage(result.error);
+                enhancedResult.errorCategory = getErrorCategory(result.error);
             }
+            return enhancedResult;
         });
+
+        // Format and display batch results using the new error handler
+        const formattedResults = formatBatchResults(enhancedResults);
+
+        console.log(`\n📊 BATCH WORKFLOW SCHEME DELETE OPERATION RESULTS:`);
+        console.log(formattedResults);
+
+        // Log operation summary with detailed statistics
+        const operationLogger = require('../utils/operationLogger');
+        const operationId = operationLogger.generateOperationId();
+        logOperationSummary(operationId, enhancedResults);
+
+        // Display detailed error information for failures
+        const failureResults = enhancedResults.filter(r => !r.success);
+        if (failureResults.length > 0) {
+            console.log(`\n🔍 DETAILED ERROR ANALYSIS:`);
+            console.log('='.repeat(60));
+
+            failureResults.forEach((result, index) => {
+                console.log(`\n${index + 1}. Workflow Scheme: ${result.id}`);
+                console.log(`   Error: ${result.error}`);
+                console.log(`   Category: ${result.errorCategory || 'Unknown'}`);
+
+                // Provide troubleshooting suggestions based on error category
+                if (result.errorCategory === 'permission') {
+                    console.log(`   💡 Suggestion: Check if you have 'Manage Workflow Schemes' permission`);
+                } else if (result.errorCategory === 'not_found') {
+                    console.log(`   💡 Suggestion: Verify the workflow scheme ID '${result.id}' exists`);
+                } else if (result.errorCategory === 'validation') {
+                    console.log(`   💡 Suggestion: Workflow scheme may be in use or has dependencies`);
+                }
+            });
+        }
     }
 }
 
@@ -336,6 +512,124 @@ async function updateProjectCategory(config, projectKey, categoryId) {
     const jira = new JiraApi(config.url, config.email, config.token);
     await jira.updateProject(projectKey, { projectCategory: { id: categoryId } });
     console.log(`Project ${projectKey} category changed.`);
+}
+
+async function projectDetails(config, projectKey) {
+    const Loader = require('../utils/loader');
+    const loader = new Loader(`Fetching project details for ${projectKey}`);
+    loader.start();
+
+    try {
+        const jira = new JiraApi(config.url, config.email, config.token);
+
+        // Fetch project details
+        const project = await jira.getProject(projectKey);
+
+        // Fetch boards associated with the project
+        loader.text = `Fetching boards for ${projectKey}`;
+        const boards = await jira.getProjectBoards(projectKey);
+
+        // Fetch workflow schemes associated with the project
+        loader.text = `Fetching workflow schemes for ${projectKey}`;
+        const workflowSchemeAssociations = await jira.getProjectWorkflowSchemes(projectKey);
+
+        // Fetch full details for each workflow scheme
+        const workflowSchemes = [];
+        for (const association of workflowSchemeAssociations) {
+            if (association.workflowScheme && association.workflowScheme.id) {
+                try {
+                    const scheme = await jira.getWorkflowScheme(association.workflowScheme.id);
+                    workflowSchemes.push(scheme);
+                } catch (error) {
+                    // If we can't fetch scheme details, create a minimal object
+                    console.warn(`Warning: Could not fetch details for workflow scheme ${association.workflowScheme.id}: ${getErrorMessage(error)}`);
+                    workflowSchemes.push({
+                        id: association.workflowScheme.id,
+                        name: 'Unknown',
+                        description: 'Could not fetch details',
+                        defaultWorkflow: 'Unknown',
+                        projects: []
+                    });
+                }
+            }
+        }
+
+        // Fetch workflows associated with the project
+        loader.text = `Fetching workflows for ${projectKey}`;
+        const workflows = await jira.getProjectWorkflows(projectKey);
+
+        // Fetch statuses for each workflow
+        // Note: We use workflow-specific endpoints (/rest/api/3/workflow/{workflowId}/statuses)
+        // instead of /rest/api/3/status because we need to associate statuses with specific workflows.
+        // The /rest/api/3/status endpoint returns all statuses but doesn't provide workflow associations.
+        loader.text = `Fetching workflow statuses for ${projectKey}`;
+        const workflowStatuses = [];
+
+        for (const workflow of workflows) {
+            try {
+                // Extract workflow ID - handle nested structure where id is an object
+                let workflowId = null;
+                if (workflow.id) {
+                    if (typeof workflow.id === 'string') {
+                        workflowId = workflow.id;
+                    } else if (workflow.id.entityId) {
+                        workflowId = workflow.id.entityId;
+                    } else if (workflow.id.id) {
+                        workflowId = workflow.id.id;
+                    } else if (workflow.id.key) {
+                        workflowId = workflow.id.key;
+                    }
+                } else if (workflow.entityId) {
+                    workflowId = workflow.entityId;
+                } else if (workflow.workflowId) {
+                    workflowId = workflow.workflowId;
+                } else if (workflow.key) {
+                    workflowId = workflow.key;
+                }
+
+                // Extract workflow name - handle nested structure
+                let workflowName = 'N/A';
+                if (workflow.id && workflow.id.name) {
+                    workflowName = workflow.id.name;
+                } else if (workflow.name) {
+                    workflowName = workflow.name;
+                } else if (workflow.displayName) {
+                    workflowName = workflow.displayName;
+                } else if (workflow.workflowName) {
+                    workflowName = workflow.workflowName;
+                } else if (workflow.id && workflow.id.displayName) {
+                    workflowName = workflow.id.displayName;
+                }
+
+                if (workflowId) {
+                    const statuses = await jira.getWorkflowStatuses(workflowId);
+
+                    // Add each status to the workflowStatuses array
+                    for (const status of statuses) {
+                        workflowStatuses.push({
+                            workflowName,
+                            statusId: status.id || 'N/A',
+                            statusName: status.name || 'N/A'
+                        });
+                    }
+                }
+            } catch (error) {
+                console.warn(`Warning: Could not fetch statuses for workflow: ${getErrorMessage(error)}`);
+                // Continue with other workflows
+            }
+        }
+
+        loader.stop();
+
+        // Display the results
+        const { createProjectDetailsTable } = require('../utils/table');
+        console.log(createProjectDetailsTable(project, boards, workflows, workflowSchemes, workflowStatuses));
+
+        return { project, boards, workflows, workflowSchemes, workflowStatuses };
+    } catch (error) {
+        loader.stop();
+        throw error;
+    }
 }
 
 async function cleanupWorkflows(config, execute = false) {
@@ -435,7 +729,7 @@ async function cleanupWorkflows(config, execute = false) {
     } catch (error) {
         loader.stop();
         if (emailLogger) {
-            await emailLogger.sendLog('Cleanup Workflows - Erro', `Erro: ${error.message}`);
+            await emailLogger.sendLog('Cleanup Workflows - Erro', `Erro: ${getErrorMessage(error)}`);
         }
         throw error;
     }
@@ -541,7 +835,7 @@ async function cleanupWorkflowSchemes(config, execute = false) {
     } catch (error) {
         loader.stop();
         if (emailLogger) {
-            await emailLogger.sendLog('Cleanup Workflow Schemes - Erro', `Erro: ${error.message}`);
+            await emailLogger.sendLog('Cleanup Workflow Schemes - Erro', `Erro: ${getErrorMessage(error)}`);
         }
         throw error;
     }
@@ -649,13 +943,48 @@ async function deleteIssueTypeScreenSchemes(config, schemeIds, options = {}) {
         // Original behavior: delete specific schemes
         const results = await jira.deleteIssueTypeScreenSchemes(schemeIds);
 
-        results.forEach(result => {
-            if (result.success) {
-                console.log(`✓ Issue type screen scheme ${result.id} deleted successfully.`);
-            } else {
-                console.log(`✗ Error deleting issue type screen scheme ${result.id}: ${result.error}`);
+        // Transform results to include proper error messages and categories
+        const enhancedResults = results.map(result => {
+            const enhancedResult = { ...result };
+            if (!result.success && result.error) {
+                enhancedResult.error = getErrorMessage(result.error);
+                enhancedResult.errorCategory = getErrorCategory(result.error);
             }
+            return enhancedResult;
         });
+
+        // Format and display batch results using the new error handler
+        const formattedResults = formatBatchResults(enhancedResults);
+
+        console.log(`\n📊 BATCH ISSUE TYPE SCREEN SCHEME DELETE OPERATION RESULTS:`);
+        console.log(formattedResults);
+
+        // Log operation summary with detailed statistics
+        const operationLogger = require('../utils/operationLogger');
+        const operationId = operationLogger.generateOperationId();
+        logOperationSummary(operationId, enhancedResults);
+
+        // Display detailed error information for failures
+        const failureResults = enhancedResults.filter(r => !r.success);
+        if (failureResults.length > 0) {
+            console.log(`\n🔍 DETAILED ERROR ANALYSIS:`);
+            console.log('='.repeat(60));
+
+            failureResults.forEach((result, index) => {
+                console.log(`\n${index + 1}. Issue Type Screen Scheme: ${result.id}`);
+                console.log(`   Error: ${result.error}`);
+                console.log(`   Category: ${result.errorCategory || 'Unknown'}`);
+
+                // Provide troubleshooting suggestions based on error category
+                if (result.errorCategory === 'permission') {
+                    console.log(`   💡 Suggestion: Check if you have 'Manage Issue Type Screen Schemes' permission`);
+                } else if (result.errorCategory === 'not_found') {
+                    console.log(`   💡 Suggestion: Verify the scheme ID '${result.id}' exists`);
+                } else if (result.errorCategory === 'validation') {
+                    console.log(`   💡 Suggestion: Scheme may be in use or has dependencies`);
+                }
+            });
+        }
     }
 }
 
@@ -761,13 +1090,48 @@ async function deleteIssueTypeSchemes(config, schemeIds, options = {}) {
         // Original behavior: delete specific schemes
         const results = await jira.deleteIssueTypeSchemes(schemeIds);
 
-        results.forEach(result => {
-            if (result.success) {
-                console.log(`✓ Issue type scheme ${result.id} deleted successfully.`);
-            } else {
-                console.log(`✗ Error deleting issue type scheme ${result.id}: ${result.error}`);
+        // Transform results to include proper error messages and categories
+        const enhancedResults = results.map(result => {
+            const enhancedResult = { ...result };
+            if (!result.success && result.error) {
+                enhancedResult.error = getErrorMessage(result.error);
+                enhancedResult.errorCategory = getErrorCategory(result.error);
             }
+            return enhancedResult;
         });
+
+        // Format and display batch results using the new error handler
+        const formattedResults = formatBatchResults(enhancedResults);
+
+        console.log(`\n📊 BATCH ISSUE TYPE SCHEME DELETE OPERATION RESULTS:`);
+        console.log(formattedResults);
+
+        // Log operation summary with detailed statistics
+        const operationLogger = require('../utils/operationLogger');
+        const operationId = operationLogger.generateOperationId();
+        logOperationSummary(operationId, enhancedResults);
+
+        // Display detailed error information for failures
+        const failureResults = enhancedResults.filter(r => !r.success);
+        if (failureResults.length > 0) {
+            console.log(`\n🔍 DETAILED ERROR ANALYSIS:`);
+            console.log('='.repeat(60));
+
+            failureResults.forEach((result, index) => {
+                console.log(`\n${index + 1}. Issue Type Scheme: ${result.id}`);
+                console.log(`   Error: ${result.error}`);
+                console.log(`   Category: ${result.errorCategory || 'Unknown'}`);
+
+                // Provide troubleshooting suggestions based on error category
+                if (result.errorCategory === 'permission') {
+                    console.log(`   💡 Suggestion: Check if you have 'Manage Issue Type Schemes' permission`);
+                } else if (result.errorCategory === 'not_found') {
+                    console.log(`   💡 Suggestion: Verify the scheme ID '${result.id}' exists`);
+                } else if (result.errorCategory === 'validation') {
+                    console.log(`   💡 Suggestion: Scheme may be in use or has dependencies`);
+                }
+            });
+        }
     }
 }
 
@@ -799,23 +1163,78 @@ async function deleteIssueTypes(config, issueTypeIds) {
     const jira = new JiraApi(config.url, config.email, config.token);
     const results = await jira.deleteIssueTypes(issueTypeIds);
 
-    results.forEach(result => {
-        if (result.success) {
-            console.log(`✓ Issue type ${result.id} deleted successfully.`);
-        } else {
-            console.log(`✗ Error deleting issue type ${result.id}: ${result.error}`);
+    // Transform results to include proper error messages and categories
+    const enhancedResults = results.map(result => {
+        const enhancedResult = { ...result };
+        if (!result.success && result.error) {
+            enhancedResult.error = getErrorMessage(result.error);
+            enhancedResult.errorCategory = getErrorCategory(result.error);
         }
+        return enhancedResult;
     });
+
+    // Format and display batch results using the new error handler
+    const formattedResults = formatBatchResults(enhancedResults);
+
+    console.log(`\n📊 BATCH ISSUE TYPE DELETE OPERATION RESULTS:`);
+    console.log(formattedResults);
+
+    // Log operation summary with detailed statistics
+    const operationLogger = require('../utils/operationLogger');
+    const operationId = operationLogger.generateOperationId();
+    logOperationSummary(operationId, enhancedResults);
+
+    // Display detailed error information for failures
+    const failureResults = enhancedResults.filter(r => !r.success);
+    if (failureResults.length > 0) {
+        console.log(`\n🔍 DETAILED ERROR ANALYSIS:`);
+        console.log('='.repeat(60));
+
+        failureResults.forEach((result, index) => {
+            console.log(`\n${index + 1}. Issue Type: ${result.id}`);
+            console.log(`   Error: ${result.error}`);
+            console.log(`   Category: ${result.errorCategory || 'Unknown'}`);
+
+            // Provide troubleshooting suggestions based on error category
+            if (result.errorCategory === 'permission') {
+                console.log(`   💡 Suggestion: Check if you have 'Manage Issue Types' permission`);
+            } else if (result.errorCategory === 'not_found') {
+                console.log(`   💡 Suggestion: Verify the issue type ID '${result.id}' exists`);
+            } else if (result.errorCategory === 'validation') {
+                console.log(`   💡 Suggestion: Issue type may be in use or has dependencies`);
+            }
+        });
+    }
 }
 
-async function listScreenSchemes(config) {
+async function listScreenSchemes(config, options = {}) {
     const Loader = require('../utils/loader');
     const loader = new Loader('Searching screen schemes');
     loader.start();
 
     try {
         const jira = new JiraApi(config.url, config.email, config.token);
-        const schemes = await jira.listScreenSchemes();
+
+        let schemes = [];
+
+        // If category is provided, use the category-specific endpoint
+        if (options.category) {
+            schemes = await jira.getScreenSchemesByCategory(options.category);
+            loader.stop();
+
+            if (schemes.length === 0) {
+                console.log(`No screen schemes found for category ${options.category}.`);
+                return;
+            }
+
+            const { createScreenSchemesByCategoryTable } = require('../utils/table');
+            console.log(createScreenSchemesByCategoryTable(schemes));
+            console.log(`\nTotal screen schemes in category: ${schemes.length}`);
+            return;
+        }
+
+        // Otherwise, list all screen schemes
+        schemes = await jira.listScreenSchemes();
 
         loader.stop();
 
@@ -910,13 +1329,48 @@ async function deleteScreenSchemes(config, schemeIds, options = {}) {
         // Original behavior: delete specific schemes
         const results = await jira.deleteScreenSchemes(schemeIds);
 
-        results.forEach(result => {
-            if (result.success) {
-                console.log(`✓ Screen scheme ${result.id} deleted successfully.`);
-            } else {
-                console.log(`✗ Error deleting screen scheme ${result.id}: ${result.error}`);
+        // Transform results to include proper error messages and categories
+        const enhancedResults = results.map(result => {
+            const enhancedResult = { ...result };
+            if (!result.success && result.error) {
+                enhancedResult.error = getErrorMessage(result.error);
+                enhancedResult.errorCategory = getErrorCategory(result.error);
             }
+            return enhancedResult;
         });
+
+        // Format and display batch results using the new error handler
+        const formattedResults = formatBatchResults(enhancedResults);
+
+        console.log(`\n📊 BATCH SCREEN SCHEME DELETE OPERATION RESULTS:`);
+        console.log(formattedResults);
+
+        // Log operation summary with detailed statistics
+        const operationLogger = require('../utils/operationLogger');
+        const operationId = operationLogger.generateOperationId();
+        logOperationSummary(operationId, enhancedResults);
+
+        // Display detailed error information for failures
+        const failureResults = enhancedResults.filter(r => !r.success);
+        if (failureResults.length > 0) {
+            console.log(`\n🔍 DETAILED ERROR ANALYSIS:`);
+            console.log('='.repeat(60));
+
+            failureResults.forEach((result, index) => {
+                console.log(`\n${index + 1}. Screen Scheme: ${result.id}`);
+                console.log(`   Error: ${result.error}`);
+                console.log(`   Category: ${result.errorCategory || 'Unknown'}`);
+
+                // Provide troubleshooting suggestions based on error category
+                if (result.errorCategory === 'permission') {
+                    console.log(`   💡 Suggestion: Check if you have 'Manage Screen Schemes' permission`);
+                } else if (result.errorCategory === 'not_found') {
+                    console.log(`   💡 Suggestion: Verify the scheme ID '${result.id}' exists`);
+                } else if (result.errorCategory === 'validation') {
+                    console.log(`   💡 Suggestion: Scheme may be in use or has dependencies`);
+                }
+            });
+        }
     }
 }
 
@@ -955,13 +1409,48 @@ async function deleteScreens(config, screenIds) {
     const jira = new JiraApi(config.url, config.email, config.token);
     const results = await jira.deleteScreens(screenIds);
 
-    results.forEach(result => {
-        if (result.success) {
-            console.log(`✓ Screen ${result.id} deleted successfully.`);
-        } else {
-            console.log(`✗ Error deleting screen ${result.id}: ${result.error}`);
+    // Transform results to include proper error messages and categories
+    const enhancedResults = results.map(result => {
+        const enhancedResult = { ...result };
+        if (!result.success && result.error) {
+            enhancedResult.error = getErrorMessage(result.error);
+            enhancedResult.errorCategory = getErrorCategory(result.error);
         }
+        return enhancedResult;
     });
+
+    // Format and display batch results using the new error handler
+    const formattedResults = formatBatchResults(enhancedResults);
+
+    console.log(`\n📊 BATCH SCREEN DELETE OPERATION RESULTS:`);
+    console.log(formattedResults);
+
+    // Log operation summary with detailed statistics
+    const operationLogger = require('../utils/operationLogger');
+    const operationId = operationLogger.generateOperationId();
+    logOperationSummary(operationId, enhancedResults);
+
+    // Display detailed error information for failures
+    const failureResults = enhancedResults.filter(r => !r.success);
+    if (failureResults.length > 0) {
+        console.log(`\n🔍 DETAILED ERROR ANALYSIS:`);
+        console.log('='.repeat(60));
+
+        failureResults.forEach((result, index) => {
+            console.log(`\n${index + 1}. Screen: ${result.id}`);
+            console.log(`   Error: ${result.error}`);
+            console.log(`   Category: ${result.errorCategory || 'Unknown'}`);
+
+            // Provide troubleshooting suggestions based on error category
+            if (result.errorCategory === 'permission') {
+                console.log(`   💡 Suggestion: Check if you have 'Manage Screens' permission`);
+            } else if (result.errorCategory === 'not_found') {
+                console.log(`   💡 Suggestion: Verify the screen ID '${result.id}' exists`);
+            } else if (result.errorCategory === 'validation') {
+                console.log(`   💡 Suggestion: Screen may be in use or has dependencies`);
+            }
+        });
+    }
 }
 
 async function listFields(config, options = {}) {
@@ -971,10 +1460,10 @@ async function listFields(config, options = {}) {
 
     try {
         const jira = new JiraApi(config.url, config.email, config.token);
-        
+
         // Prepare search parameters
         const searchParams = {};
-        
+
         // Map options to API parameters
         if (options.startAt !== undefined) searchParams.startAt = options.startAt;
         if (options.maxResults !== undefined) searchParams.maxResults = options.maxResults;
@@ -1018,7 +1507,7 @@ async function listFields(config, options = {}) {
 
         const { createFieldsTable } = require('../utils/table');
         console.log(createFieldsTable(sortedFields));
-        
+
         // Show pagination info if applicable
         if (options.startAt !== undefined || options.maxResults !== undefined) {
             console.log(`\nTotal de campos: ${fields.length}`);
@@ -1039,12 +1528,12 @@ async function getIssue(config, issueIdOrKey, options = {}) {
 
     try {
         const jira = new JiraApi(config.url, config.email, config.token);
-        
+
         // Prepare API options
         const apiOptions = {};
         if (options.expand) apiOptions.expand = options.expand;
         if (options.properties) apiOptions.properties = options.properties;
-        
+
         // Merge default fields with requested fields
         let fields = options.fields;
         if (fields) {
@@ -1071,13 +1560,13 @@ async function getIssue(config, issueIdOrKey, options = {}) {
             fields = mergedFields.join(',');
         }
         if (fields) apiOptions.fields = fields;
-        
+
         const issue = await jira.getIssue(issueIdOrKey, apiOptions);
         loader.stop();
 
         const { createIssueDetailTable } = require('../utils/table');
         console.log(createIssueDetailTable(issue, options.fields)); // Pass original requested fields for filtering
-        
+
         return issue;
     } catch (error) {
         loader.stop();
@@ -1092,7 +1581,7 @@ async function searchIssues(config, jql, options = {}) {
 
     try {
         const jira = new JiraApi(config.url, config.email, config.token);
-        
+
         // Prepare API options
         const apiOptions = {
             startAt: options.startAt || 0,
@@ -1101,18 +1590,18 @@ async function searchIssues(config, jql, options = {}) {
         if (options.fields) apiOptions.fields = options.fields;
         if (options.expand) apiOptions.expand = options.expand;
         if (options.validateQuery !== undefined) apiOptions.validateQuery = options.validateQuery;
-        
+
         const searchResults = await jira.searchIssues(jql, apiOptions);
         loader.stop();
 
         console.log(`Total de issues encontradas: ${searchResults.total}`);
         console.log(`Mostrando ${searchResults.issues?.length || 0} issues (início: ${searchResults.startAt || 0})`);
-        
+
         if (searchResults.issues && searchResults.issues.length > 0) {
             const { createIssuesTable } = require('../utils/table');
             console.log(createIssuesTable(searchResults.issues));
         }
-        
+
         return searchResults;
     } catch (error) {
         loader.stop();
@@ -1127,41 +1616,70 @@ async function getIssuesBatch(config, issueIdsOrKeys, options = {}) {
 
     try {
         const jira = new JiraApi(config.url, config.email, config.token);
-        
+
         // Prepare API options
         const apiOptions = {};
         if (options.fields) apiOptions.fields = options.fields;
         if (options.expand) apiOptions.expand = options.expand;
-        
+
         const results = await jira.getIssuesBatch(issueIdsOrKeys, apiOptions);
         loader.stop();
 
-        // Count successes and failures
-        const successCount = results.filter(r => r.success).length;
-        const failureCount = results.filter(r => !r.success).length;
-        
-        console.log(`Resultados: ${successCount} sucessos, ${failureCount} falhas`);
-        
+        // Transform results to include proper error messages and categories
+        const enhancedResults = results.map(result => {
+            const enhancedResult = { ...result };
+            if (!result.success && result.error) {
+                enhancedResult.error = getErrorMessage(result.error);
+                enhancedResult.errorCategory = getErrorCategory(result.error);
+            }
+            return enhancedResult;
+        });
+
+        // Format and display batch results using the new error handler
+        const formattedResults = formatBatchResults(enhancedResults);
+
+        console.log(`\n📊 BATCH ISSUE FETCH OPERATION RESULTS:`);
+        console.log(formattedResults);
+
+        // Log operation summary with detailed statistics
+        const operationLogger = require('../utils/operationLogger');
+        const operationId = operationLogger.generateOperationId();
+        logOperationSummary(operationId, enhancedResults);
+
         // Display successful issues in a table
-        const successfulIssues = results.filter(r => r.success).map(r => r.data);
+        const successfulIssues = enhancedResults.filter(r => r.success).map(r => r.data);
         if (successfulIssues.length > 0) {
             const { createIssuesTable } = require('../utils/table');
-            console.log('\nIssues encontradas:');
+            console.log('\n📋 SUCCESSFUL ISSUES:');
             console.log(createIssuesTable(successfulIssues));
         }
-        
-        // Display failures
-        if (failureCount > 0) {
-            console.log('\nFalhas:');
-            results.filter(r => !r.success).forEach(result => {
-                console.log(`✗ ${result.issueIdOrKey}: ${result.error}`);
+
+        // Display detailed error information for failures
+        const failureResults = enhancedResults.filter(r => !r.success);
+        if (failureResults.length > 0) {
+            console.log(`\n🔍 DETAILED ERROR ANALYSIS:`);
+            console.log('='.repeat(60));
+
+            failureResults.forEach((result, index) => {
+                console.log(`\n${index + 1}. Issue: ${result.issueIdOrKey}`);
+                console.log(`   Error: ${result.error}`);
+                console.log(`   Category: ${result.errorCategory || 'Unknown'}`);
+
+                // Provide troubleshooting suggestions based on error category
+                if (result.errorCategory === 'permission') {
+                    console.log(`   💡 Suggestion: Check if you have 'Browse Projects' permission for this issue`);
+                } else if (result.errorCategory === 'not_found') {
+                    console.log(`   💡 Suggestion: Verify the issue key '${result.issueIdOrKey}' exists and is accessible`);
+                } else if (result.errorCategory === 'validation') {
+                    console.log(`   💡 Suggestion: Issue may be archived or restricted`);
+                }
             });
         }
-        
+
         // Display rate limit info if any rate limits were hit
         displayRateLimitInfo(jira);
-        
-        return results;
+
+        return enhancedResults;
     } catch (error) {
         loader.stop();
         throw error;
@@ -1175,7 +1693,7 @@ async function setIssueFieldValue(config, issueIdOrKey, fieldId, value, options 
 
     try {
         const jira = new JiraApi(config.url, config.email, config.token);
-        
+
         // Check if execution mode (default is preview)
         if (!options.exec) {
             loader.stop();
@@ -1188,14 +1706,14 @@ async function setIssueFieldValue(config, issueIdOrKey, fieldId, value, options 
             console.log(`[PREVIEW] Para executar a atualização, adicione a opção --exec`);
             return { preview: true, issueIdOrKey, fieldId, value, mode };
         }
-        
+
         const updateOptions = {};
         if (options.append) updateOptions.append = true;
         if (options.separator) updateOptions.separator = options.separator;
-        
+
         const result = await jira.updateIssueField(issueIdOrKey, fieldId, value, updateOptions);
         loader.stop();
-        
+
         const mode = options.append ? 'adicionado ao' : 'atualizado no';
         console.log(`✓ Campo ${fieldId} ${mode} campo da issue ${issueIdOrKey}`);
         return result;
@@ -1209,10 +1727,10 @@ async function setIssueFieldValueBatch(config, issueIdsOrKeys, fieldId, value, o
     const Loader = require('../utils/loader');
     const operationLogger = require('../utils/operationLogger');
     const jira = new JiraApi(config.url, config.email, config.token);
-    
+
     // Generate operation ID for this batch
     const operationId = operationLogger.generateOperationId();
-    
+
     const loader = new Loader(`Updating field ${fieldId} em ${issueIdsOrKeys.length} issues`);
     loader.start();
 
@@ -1230,43 +1748,63 @@ async function setIssueFieldValueBatch(config, issueIdsOrKeys, fieldId, value, o
             console.log(`[PREVIEW] Para executar a atualização, adicione a opção --exec`);
             return { preview: true, count: issueIdsOrKeys.length, fieldId, value, mode };
         }
-        
+
         const updateOptions = {};
         if (options.append) updateOptions.append = true;
         if (options.separator) updateOptions.separator = options.separator;
-        
+
         const results = await jira.updateIssueFieldsBatch(issueIdsOrKeys, fieldId, value, updateOptions);
         loader.stop();
-        
-        // Count successes and failures
-        const successCount = results.filter(r => r.success).length;
-        const failureCount = results.filter(r => !r.success).length;
-        
+
+        // Transform results to include proper error messages and categories
+        const enhancedResults = results.map(result => {
+            const enhancedResult = { ...result };
+            if (!result.success && result.error) {
+                enhancedResult.error = getErrorMessage(result.error);
+                enhancedResult.errorCategory = getErrorCategory(result.error);
+            }
+            return enhancedResult;
+        });
+
+        // Format and display batch results using the new error handler
+        const formattedResults = formatBatchResults(enhancedResults);
+
+        console.log(`\n📊 BATCH FIELD UPDATE OPERATION RESULTS:`);
+        console.log(formattedResults);
+
         console.log(`\n✓ Batch operation completed with ID: ${operationId}`);
-        console.log(`Resultados: ${successCount} sucessos, ${failureCount} falhas`);
         console.log(`\nTo undo this operation, use: jira-cli undo-last-field-operation -o "${operationId}" -t ${fieldId} --exec`);
-        
-        // Display successes
-        if (successCount > 0) {
-            const mode = options.append ? 'adicionado ao' : 'atualizado no';
-            console.log('\nSucessos:');
-            results.filter(r => r.success).forEach(result => {
-                console.log(`✓ ${result.issueIdOrKey}: Campo ${fieldId} ${mode} campo`);
+
+        // Log operation summary with detailed statistics
+        logOperationSummary(operationId, enhancedResults);
+
+        // Display detailed error information for failures
+        const failureResults = enhancedResults.filter(r => !r.success);
+        if (failureResults.length > 0) {
+            console.log(`\n🔍 DETAILED ERROR ANALYSIS:`);
+            console.log('='.repeat(60));
+
+            failureResults.forEach((result, index) => {
+                console.log(`\n${index + 1}. Issue: ${result.issueIdOrKey}`);
+                console.log(`   Field: ${fieldId}`);
+                console.log(`   Error: ${result.error}`);
+                console.log(`   Category: ${result.errorCategory || 'Unknown'}`);
+
+                // Provide troubleshooting suggestions based on error category
+                if (result.errorCategory === 'permission') {
+                    console.log(`   💡 Suggestion: Check if you have 'Edit Issues' permission for this issue`);
+                } else if (result.errorCategory === 'not_found') {
+                    console.log(`   💡 Suggestion: Verify the issue key '${result.issueIdOrKey}' exists and is accessible`);
+                } else if (result.errorCategory === 'validation') {
+                    console.log(`   💡 Suggestion: Field value may be invalid or field may be read-only`);
+                }
             });
         }
-        
-        // Display failures
-        if (failureCount > 0) {
-            console.log('\nFalhas:');
-            results.filter(r => !r.success).forEach(result => {
-                console.log(`✗ ${result.issueIdOrKey}: ${result.error}`);
-            });
-        }
-        
+
         // Display rate limit info if any rate limits were hit
         displayRateLimitInfo(jira);
-        
-        return results;
+
+        return enhancedResults;
     } catch (error) {
         loader.stop();
         throw error;
@@ -1280,7 +1818,7 @@ async function copyIssueFieldsValues(config, sourceIssueIdOrKey, sourceFields, t
 
     try {
         const jira = new JiraApi(config.url, config.email, config.token);
-        
+
         // Check if execution mode (default is preview)
         if (!options.exec) {
             loader.stop();
@@ -1299,15 +1837,15 @@ async function copyIssueFieldsValues(config, sourceIssueIdOrKey, sourceFields, t
             console.log(`[PREVIEW] To execute copy, add --exec option`);
             return { preview: true, sourceIssueIdOrKey, sourceFields, targetFieldId, options };
         }
-        
+
         const copyOptions = {};
         if (options.append) copyOptions.append = true;
         if (options.separator) copyOptions.separator = options.separator;
         if (options.fieldSeparator) copyOptions.fieldSeparator = options.fieldSeparator;
-        
+
         const result = await jira.copyMultipleFieldValues(sourceIssueIdOrKey, sourceFields, targetFieldId, copyOptions);
         loader.stop();
-        
+
         console.log(`✓ Values copied from fields [${sourceFields.join(', ')}] to ${targetFieldId} in issue ${sourceIssueIdOrKey}`);
         return result;
     } catch (error) {
@@ -1320,31 +1858,31 @@ async function copyIssueFieldsValuesBatch(config, issueIdsOrKeys, sourceFields, 
     const Loader = require('../utils/loader');
     const operationLogger = require('../utils/operationLogger');
     const jira = new JiraApi(config.url, config.email, config.token);
-    
+
     // Generate operation ID for this batch
     const operationId = operationLogger.generateOperationId();
-    
+
     let finalIssueIds = issueIdsOrKeys;
-    
+
     // If JQL is provided, search for issues first
     if (options.jql) {
         const loader = new Loader(`Searching issues with JQL: ${options.jql.substring(0, 50)}${options.jql.length > 50 ? '...' : ''}`);
         loader.start();
-        
+
         try {
             // Search all issues matching JQL with pagination
             let allIssues = [];
             let startAt = 0;
             const maxResults = 1000; // Large batch for efficiency
             let hasMore = true;
-            
+
             while (hasMore) {
                 const searchResults = await jira.searchIssues(options.jql, {
                     startAt,
                     maxResults,
                     fields: 'key' // Only need keys for the search
                 });
-                
+
                 if (searchResults.issues && searchResults.issues.length > 0) {
                     allIssues.push(...searchResults.issues.map(issue => issue.key));
                     startAt += maxResults;
@@ -1353,14 +1891,14 @@ async function copyIssueFieldsValuesBatch(config, issueIdsOrKeys, sourceFields, 
                     hasMore = false;
                 }
             }
-            
+
             loader.stop();
-            
+
             if (allIssues.length === 0) {
                 console.log('No issues found matching the JQL query.');
                 return [];
             }
-            
+
             console.log(`Found ${allIssues.length} issues matching JQL query.`);
             finalIssueIds = allIssues;
         } catch (error) {
@@ -1368,7 +1906,7 @@ async function copyIssueFieldsValuesBatch(config, issueIdsOrKeys, sourceFields, 
             throw error;
         }
     }
-    
+
     const loader = new Loader(`Copying field values from ${sourceFields.length} source fields to ${targetFieldId} in ${finalIssueIds.length} issues`);
     loader.start();
 
@@ -1376,54 +1914,54 @@ async function copyIssueFieldsValuesBatch(config, issueIdsOrKeys, sourceFields, 
         // Check if execution mode (default is preview)
         if (!options.exec) {
             loader.stop();
-            
+
             // Enhanced preview with detailed information
             console.log('\n' + '='.repeat(80));
             console.log('📋 COPY FIELD VALUES BATCH - PREVIEW');
             console.log('='.repeat(80));
-            
+
             // 1. Operation scope - prominently display item count
             console.log(`\n📊 OPERATION SCOPE:`);
             console.log(`   Total issues to process: ${finalIssueIds.length}`);
-            
+
             if (options.jql) {
                 console.log(`   Issues found via JQL: ${options.jql}`);
             } else if (issueIdsOrKeys) {
                 console.log(`   Issues specified directly: ${issueIdsOrKeys.length} issue(s)`);
             }
-            
+
             // 2. Field mapping details
             console.log(`\n🔄 FIELD MAPPING:`);
             console.log(`   Source fields: [${sourceFields.join(', ')}]`);
             console.log(`   Target field: ${targetFieldId}`);
-            
+
             // 3. Operation mode and settings
             console.log(`\n⚙️  OPERATION SETTINGS:`);
             const mode = options.append ? 'append (add to existing value)' : 'replace (overwrite existing value)';
             console.log(`   Mode: ${mode}`);
-            
+
             if (options.append && options.separator) {
                 console.log(`   Append separator: "${options.separator}"`);
             }
             if (options.fieldSeparator) {
                 console.log(`   Field separator: "${options.fieldSeparator}"`);
             }
-            
+
             // 4. Performance and estimated impact
             console.log(`\n📈 PERFORMANCE ESTIMATES:`);
             const batchSize = options.batchSize || 10;
             const chunkSize = options.chunkSize || 100;
             console.log(`   Batch size: ${batchSize} (issues processed in parallel)`);
             console.log(`   Chunk size: ${chunkSize} (issues per chunk)`);
-            
+
             // Calculate estimated API calls
             const estimatedApiCalls = Math.ceil(finalIssueIds.length / batchSize) * 2; // Rough estimate: 2 API calls per batch
             console.log(`   Estimated API calls: ~${estimatedApiCalls}`);
-            
+
             // Estimate time (rough calculation: 0.5 seconds per batch + overhead)
             const estimatedTimeSeconds = Math.max(5, Math.ceil(finalIssueIds.length / batchSize) * 0.5);
             console.log(`   Estimated time: ~${estimatedTimeSeconds} seconds`);
-            
+
             // 5. Sample of affected issues
             console.log(`\n🔍 SAMPLE OF AFFECTED ISSUES (first 10):`);
             const sampleIssues = finalIssueIds.slice(0, 10);
@@ -1437,7 +1975,7 @@ async function copyIssueFieldsValuesBatch(config, issueIdsOrKeys, sourceFields, 
             } else {
                 console.log(`   No issues found`);
             }
-            
+
             // 6. Warnings and recommendations
             console.log(`\n⚠️  RECOMMENDATIONS:`);
             if (finalIssueIds.length > 100) {
@@ -1450,31 +1988,31 @@ async function copyIssueFieldsValuesBatch(config, issueIdsOrKeys, sourceFields, 
                 console.log(`   • Replace mode will overwrite existing content in target field`);
             }
             console.log(`   • Review sample issues above to ensure correct scope`);
-            
+
             // 7. Execution instructions
             console.log(`\n🚀 TO EXECUTE THIS OPERATION:`);
             console.log(`   Add the --exec option to your command`);
             console.log(`\n` + '='.repeat(80));
             console.log(`[PREVIEW] This is a preview only. No changes have been made.`);
             console.log('='.repeat(80) + '\n');
-            
+
             return { preview: true, count: finalIssueIds.length, sourceFields, targetFieldId, options };
         }
-        
+
         // Progress tracking
         let processedCount = 0;
         const totalCount = finalIssueIds.length;
         const startTime = Date.now();
-        
+
         const onProgress = (count) => {
             processedCount = count;
             const elapsed = (Date.now() - startTime) / 1000;
             const rate = count / elapsed;
             const eta = totalCount > count ? (totalCount - count) / rate : 0;
-            
-            loader.text = `Processing ${count}/${totalCount} issues (${(count/totalCount*100).toFixed(1)}%) - ETA: ${Math.round(eta)}s`;
+
+            loader.text = `Processing ${count}/${totalCount} issues (${(count / totalCount * 100).toFixed(1)}%) - ETA: ${Math.round(eta)}s`;
         };
-        
+
         const copyOptions = {
             ...options,
             onProgress
@@ -1482,56 +2020,87 @@ async function copyIssueFieldsValuesBatch(config, issueIdsOrKeys, sourceFields, 
         if (options.append) copyOptions.append = true;
         if (options.separator) copyOptions.separator = options.separator;
         if (options.fieldSeparator) copyOptions.fieldSeparator = options.fieldSeparator;
-        
+
         const results = await jira.copyMultipleFieldValuesBatch(finalIssueIds, sourceFields, targetFieldId, copyOptions);
         loader.stop();
-        
+
+        // Transform results to include proper error messages and categories
+        const enhancedResults = results.map(result => {
+            const enhancedResult = { ...result };
+            if (!result.success && result.error) {
+                enhancedResult.error = getErrorMessage(result.error);
+                enhancedResult.errorCategory = getErrorCategory(result.error);
+            }
+            return enhancedResult;
+        });
+
         // Count successes and failures
-        const successCount = results.filter(r => r.success).length;
-        const failureCount = results.filter(r => !r.success).length;
+        const successCount = enhancedResults.filter(r => r.success).length;
+        const failureCount = enhancedResults.filter(r => !r.success).length;
         const totalTime = (Date.now() - startTime) / 1000;
-        
+
+        // Format and display batch results using the new error handler
+        const formattedResults = formatBatchResults(enhancedResults);
+
+        console.log(`\n📊 BATCH FIELD COPY OPERATION RESULTS:`);
+        console.log(formattedResults);
+
         console.log(`\n✓ Batch operation completed with ID: ${operationId}`);
-        console.log(`Results: ${successCount} successes, ${failureCount} failures`);
-        console.log(`Total time: ${totalTime.toFixed(1)}s (${(totalCount/totalTime).toFixed(1)} issues/sec)`);
+        console.log(`Total time: ${totalTime.toFixed(1)}s (${(totalCount / totalTime).toFixed(1)} issues/sec)`);
         console.log(`\nTo undo this operation, use: jira-cli undo-last-field-operation -o "${operationId}" -t ${targetFieldId} --exec`);
-        
-        // Display successes (limited to avoid overwhelming output)
-        if (successCount > 0) {
-            console.log('\nSuccesses:');
-            const successResults = results.filter(r => r.success);
-            const displayCount = Math.min(successResults.length, 10);
-            
-            for (let i = 0; i < displayCount; i++) {
-                const result = successResults[i];
-                console.log(`✓ ${result.issueIdOrKey}: Fields [${sourceFields.join(', ')}] copied to ${targetFieldId}`);
-            }
-            
-            if (successResults.length > displayCount) {
-                console.log(`... and ${successResults.length - displayCount} more successful operations`);
-            }
-        }
-        
-        // Display failures (limited to avoid overwhelming output)
-        if (failureCount > 0) {
-            console.log('\nFailures:');
-            const failureResults = results.filter(r => !r.success);
+
+        // Log operation summary with detailed statistics
+        logOperationSummary(operationId, enhancedResults);
+
+        // Display detailed error information for failures
+        const failureResults = enhancedResults.filter(r => !r.success);
+        if (failureResults.length > 0) {
+            console.log(`\n🔍 DETAILED ERROR ANALYSIS:`);
+            console.log('='.repeat(60));
+
             const displayCount = Math.min(failureResults.length, 10);
-            
+
             for (let i = 0; i < displayCount; i++) {
                 const result = failureResults[i];
-                console.log(`✗ ${result.issueIdOrKey}: ${result.error}`);
+                console.log(`\n${i + 1}. Issue: ${result.issueIdOrKey}`);
+                console.log(`   Source Fields: [${sourceFields.join(', ')}]`);
+                console.log(`   Target Field: ${targetFieldId}`);
+                console.log(`   Error: ${result.error}`);
+                console.log(`   Category: ${result.errorCategory || 'Unknown'}`);
+
+                // Provide troubleshooting suggestions based on error category
+                if (result.errorCategory === 'permission') {
+                    console.log(`   💡 Suggestion: Check if you have 'Edit Issues' permission for this issue`);
+                } else if (result.errorCategory === 'not_found') {
+                    console.log(`   💡 Suggestion: Verify the issue key '${result.issueIdOrKey}' exists and is accessible`);
+                } else if (result.errorCategory === 'validation') {
+                    console.log(`   💡 Suggestion: Field values may be invalid or fields may be read-only`);
+                }
             }
-            
+
             if (failureResults.length > displayCount) {
-                console.log(`... and ${failureResults.length - displayCount} more failures`);
+                console.log(`\n... and ${failureResults.length - displayCount} more failures`);
+            }
+
+            // Group failures by error category for analysis
+            const failuresByCategory = {};
+            failureResults.forEach(result => {
+                const category = result.errorCategory || 'unknown';
+                failuresByCategory[category] = (failuresByCategory[category] || 0) + 1;
+            });
+
+            if (Object.keys(failuresByCategory).length > 0) {
+                console.log(`\n📊 FAILURE CATEGORIES:`);
+                Object.entries(failuresByCategory).forEach(([category, count]) => {
+                    console.log(`   • ${category}: ${count} failure(s)`);
+                });
             }
         }
-        
+
         // Display rate limit info if any rate limits were hit
         displayRateLimitInfo(jira);
-        
-        return results;
+
+        return enhancedResults;
     } catch (error) {
         loader.stop();
         throw error;
@@ -1547,18 +2116,18 @@ async function cleanupComplete(config, execute = false) {
         emailLogger = new EmailLogger(config);
     }
 
-    const loader = new Loader(execute ? 'Executing cleanup completa' : 'Analyzing recursos para limpeza completa');
+    const loader = new Loader(execute ? 'Executing complete cleanup' : 'Analyzing resources for complete cleanup');
     loader.start();
 
     try {
         const jira = new JiraApi(config.url, config.email, config.token);
-        
+
         // 1. Unused workflow schemes
-        loader.text = execute ? 'Buscando e excluindo workflow schemes unuseds' : 'Searching workflow schemes unuseds';
+        loader.text = execute ? 'Searching and deleting unused workflow schemes' : 'Searching unused workflow schemes';
         const unusedWorkflowSchemes = await jira.getUnusedWorkflowSchemes();
         if (unusedWorkflowSchemes.length > 0) {
             loader.stop();
-            console.log(`\n1. Workflow schemes unuseds founds: ${unusedWorkflowSchemes.length}`);
+            console.log(`\n1. Unused workflow schemes found: ${unusedWorkflowSchemes.length}`);
             if (!execute) {
                 const Table = require('cli-table3');
                 const table = new Table({
@@ -1569,35 +2138,71 @@ async function cleanupComplete(config, execute = false) {
                     table.push([scheme.id || 'N/A', scheme.name || 'N/A', scheme.description || 'No description']);
                 });
                 console.log(table.toString());
-                console.log('Para excluir, adicione a opção --exec');
+                console.log('To delete, add the --exec option');
             } else {
-                console.log(`Will be deleted ${unusedWorkflowSchemes.length} workflow schemes.`);
+                console.log(`Will delete ${unusedWorkflowSchemes.length} workflow schemes.`);
                 const readline = require('readline');
                 const rl = readline.createInterface({
                     input: process.stdin,
                     output: process.stdout
                 });
                 const answer = await new Promise(resolve => {
-                    rl.question('Confirm deletion dos workflow schemes? (Y/N): ', resolve);
+                    rl.question('Confirm deletion of workflow schemes? (Y/N): ', resolve);
                 });
                 rl.close();
                 if (answer.toUpperCase() !== 'Y') {
-                    console.log('Exclusão de workflow schemes cancelada.');
+                    console.log('Deletion of workflow schemes cancelled.');
                 } else {
                     const schemeIds = unusedWorkflowSchemes.map(s => s.id);
                     const results = await jira.deleteWorkflowSchemes(schemeIds);
-                    console.log(`Deletion results de workflow schemes (${results.length}):`);
-                    results.forEach(result => {
-                        const message = result.success
-                            ? `✓ Workflow scheme ${result.id} deleted successfully.`
-                            : `✗ Error deleting workflow scheme ${result.id}: ${result.error}`;
-                        console.log(message);
+
+                    // Transform results to include proper error messages and categories
+                    const enhancedResults = results.map(result => {
+                        const enhancedResult = { ...result };
+                        if (!result.success && result.error) {
+                            enhancedResult.error = getErrorMessage(result.error);
+                            enhancedResult.errorCategory = getErrorCategory(result.error);
+                        }
+                        return enhancedResult;
                     });
+
+                    // Format and display batch results using the new error handler
+                    const formattedResults = formatBatchResults(enhancedResults);
+
+                    console.log(`\n📊 WORKFLOW SCHEME CLEANUP OPERATION RESULTS:`);
+                    console.log(formattedResults);
+
+                    // Log operation summary with detailed statistics
+                    const operationLogger = require('../utils/operationLogger');
+                    const operationId = operationLogger.generateOperationId();
+                    logOperationSummary(operationId, enhancedResults);
+
+                    // Display detailed error information for failures
+                    const failureResults = enhancedResults.filter(r => !r.success);
+                    if (failureResults.length > 0) {
+                        console.log(`\n🔍 DETAILED ERROR ANALYSIS:`);
+                        console.log('='.repeat(60));
+
+                        failureResults.forEach((result, index) => {
+                            console.log(`\n${index + 1}. Workflow Scheme: ${result.id}`);
+                            console.log(`   Error: ${result.error}`);
+                            console.log(`   Category: ${result.errorCategory || 'Unknown'}`);
+
+                            // Provide troubleshooting suggestions based on error category
+                            if (result.errorCategory === 'permission') {
+                                console.log(`   💡 Suggestion: Check if you have 'Manage Workflow Schemes' permission`);
+                            } else if (result.errorCategory === 'not_found') {
+                                console.log(`   💡 Suggestion: Verify the workflow scheme ID '${result.id}' exists`);
+                            } else if (result.errorCategory === 'validation') {
+                                console.log(`   💡 Suggestion: Workflow scheme may be in use or has dependencies`);
+                            }
+                        });
+                    }
                 }
             }
             loader.start();
         } else {
-            console.log('\n1. No workflow scheme unused found.');
+            console.log('\n1. No unused workflow scheme found.');
         }
 
         // 2. Unused workflows (inactive without schemes)
@@ -1633,13 +2238,49 @@ async function cleanupComplete(config, execute = false) {
                 } else {
                     const workflowIds = unusedWorkflows.map(w => w.id);
                     const results = await jira.deleteWorkflows(workflowIds);
-                    console.log(`Deletion results de workflows (${results.length}):`);
-                    results.forEach(result => {
-                        const message = result.success
-                            ? `✓ Workflow ${result.id} deleted successfully.`
-                            : `✗ Error deleting workflow ${result.id}: ${result.error}`;
-                        console.log(message);
+
+                    // Transform results to include proper error messages and categories
+                    const enhancedResults = results.map(result => {
+                        const enhancedResult = { ...result };
+                        if (!result.success && result.error) {
+                            enhancedResult.error = getErrorMessage(result.error);
+                            enhancedResult.errorCategory = getErrorCategory(result.error);
+                        }
+                        return enhancedResult;
                     });
+
+                    // Format and display batch results using the new error handler
+                    const formattedResults = formatBatchResults(enhancedResults);
+
+                    console.log(`\n📊 WORKFLOW CLEANUP OPERATION RESULTS:`);
+                    console.log(formattedResults);
+
+                    // Log operation summary with detailed statistics
+                    const operationLogger = require('../utils/operationLogger');
+                    const operationId = operationLogger.generateOperationId();
+                    logOperationSummary(operationId, enhancedResults);
+
+                    // Display detailed error information for failures
+                    const failureResults = enhancedResults.filter(r => !r.success);
+                    if (failureResults.length > 0) {
+                        console.log(`\n🔍 DETAILED ERROR ANALYSIS:`);
+                        console.log('='.repeat(60));
+
+                        failureResults.forEach((result, index) => {
+                            console.log(`\n${index + 1}. Workflow: ${result.id}`);
+                            console.log(`   Error: ${result.error}`);
+                            console.log(`   Category: ${result.errorCategory || 'Unknown'}`);
+
+                            // Provide troubleshooting suggestions based on error category
+                            if (result.errorCategory === 'permission') {
+                                console.log(`   💡 Suggestion: Check if you have 'Manage Workflows' permission`);
+                            } else if (result.errorCategory === 'not_found') {
+                                console.log(`   💡 Suggestion: Verify the workflow ID '${result.id}' exists`);
+                            } else if (result.errorCategory === 'validation') {
+                                console.log(`   💡 Suggestion: Workflow may be in use or has dependencies`);
+                            }
+                        });
+                    }
                 }
             }
             loader.start();
@@ -1680,13 +2321,49 @@ async function cleanupComplete(config, execute = false) {
                 } else {
                     const schemeIds = unusedIssueTypeScreenSchemes.map(s => s.id);
                     const results = await jira.deleteIssueTypeScreenSchemes(schemeIds);
-                    console.log(`Deletion results de issue type screen schemes (${results.length}):`);
-                    results.forEach(result => {
-                        const message = result.success
-                            ? `✓ Issue type screen scheme ${result.id} deleted successfully.`
-                            : `✗ Error deleting issue type screen scheme ${result.id}: ${result.error}`;
-                        console.log(message);
+
+                    // Transform results to include proper error messages and categories
+                    const enhancedResults = results.map(result => {
+                        const enhancedResult = { ...result };
+                        if (!result.success && result.error) {
+                            enhancedResult.error = getErrorMessage(result.error);
+                            enhancedResult.errorCategory = getErrorCategory(result.error);
+                        }
+                        return enhancedResult;
                     });
+
+                    // Format and display batch results using the new error handler
+                    const formattedResults = formatBatchResults(enhancedResults);
+
+                    console.log(`\n📊 ISSUE TYPE SCREEN SCHEME CLEANUP OPERATION RESULTS:`);
+                    console.log(formattedResults);
+
+                    // Log operation summary with detailed statistics
+                    const operationLogger = require('../utils/operationLogger');
+                    const operationId = operationLogger.generateOperationId();
+                    logOperationSummary(operationId, enhancedResults);
+
+                    // Display detailed error information for failures
+                    const failureResults = enhancedResults.filter(r => !r.success);
+                    if (failureResults.length > 0) {
+                        console.log(`\n🔍 DETAILED ERROR ANALYSIS:`);
+                        console.log('='.repeat(60));
+
+                        failureResults.forEach((result, index) => {
+                            console.log(`\n${index + 1}. Issue Type Screen Scheme: ${result.id}`);
+                            console.log(`   Error: ${result.error}`);
+                            console.log(`   Category: ${result.errorCategory || 'Unknown'}`);
+
+                            // Provide troubleshooting suggestions based on error category
+                            if (result.errorCategory === 'permission') {
+                                console.log(`   💡 Suggestion: Check if you have 'Manage Issue Type Screen Schemes' permission`);
+                            } else if (result.errorCategory === 'not_found') {
+                                console.log(`   💡 Suggestion: Verify the scheme ID '${result.id}' exists`);
+                            } else if (result.errorCategory === 'validation') {
+                                console.log(`   💡 Suggestion: Scheme may be in use or has dependencies`);
+                            }
+                        });
+                    }
                 }
             }
             loader.start();
@@ -1727,13 +2404,49 @@ async function cleanupComplete(config, execute = false) {
                 } else {
                     const schemeIds = unusedIssueTypeSchemes.map(s => s.id);
                     const results = await jira.deleteIssueTypeSchemes(schemeIds);
-                    console.log(`Deletion results de issue type schemes (${results.length}):`);
-                    results.forEach(result => {
-                        const message = result.success
-                            ? `✓ Issue type scheme ${result.id} deleted successfully.`
-                            : `✗ Error deleting issue type scheme ${result.id}: ${result.error}`;
-                        console.log(message);
+
+                    // Transform results to include proper error messages and categories
+                    const enhancedResults = results.map(result => {
+                        const enhancedResult = { ...result };
+                        if (!result.success && result.error) {
+                            enhancedResult.error = getErrorMessage(result.error);
+                            enhancedResult.errorCategory = getErrorCategory(result.error);
+                        }
+                        return enhancedResult;
                     });
+
+                    // Format and display batch results using the new error handler
+                    const formattedResults = formatBatchResults(enhancedResults);
+
+                    console.log(`\n📊 ISSUE TYPE SCHEME CLEANUP OPERATION RESULTS:`);
+                    console.log(formattedResults);
+
+                    // Log operation summary with detailed statistics
+                    const operationLogger = require('../utils/operationLogger');
+                    const operationId = operationLogger.generateOperationId();
+                    logOperationSummary(operationId, enhancedResults);
+
+                    // Display detailed error information for failures
+                    const failureResults = enhancedResults.filter(r => !r.success);
+                    if (failureResults.length > 0) {
+                        console.log(`\n🔍 DETAILED ERROR ANALYSIS:`);
+                        console.log('='.repeat(60));
+
+                        failureResults.forEach((result, index) => {
+                            console.log(`\n${index + 1}. Issue Type Scheme: ${result.id}`);
+                            console.log(`   Error: ${result.error}`);
+                            console.log(`   Category: ${result.errorCategory || 'Unknown'}`);
+
+                            // Provide troubleshooting suggestions based on error category
+                            if (result.errorCategory === 'permission') {
+                                console.log(`   💡 Suggestion: Check if you have 'Manage Issue Type Schemes' permission`);
+                            } else if (result.errorCategory === 'not_found') {
+                                console.log(`   💡 Suggestion: Verify the scheme ID '${result.id}' exists`);
+                            } else if (result.errorCategory === 'validation') {
+                                console.log(`   💡 Suggestion: Scheme may be in use or has dependencies`);
+                            }
+                        });
+                    }
                 }
             }
             loader.start();
@@ -1774,13 +2487,49 @@ async function cleanupComplete(config, execute = false) {
                 } else {
                     const schemeIds = unusedScreenSchemes.map(s => s.id);
                     const results = await jira.deleteScreenSchemes(schemeIds);
-                    console.log(`Deletion results de screen schemes (${results.length}):`);
-                    results.forEach(result => {
-                        const message = result.success
-                            ? `✓ Screen scheme ${result.id} deleted successfully.`
-                            : `✗ Error deleting screen scheme ${result.id}: ${result.error}`;
-                        console.log(message);
+
+                    // Transform results to include proper error messages and categories
+                    const enhancedResults = results.map(result => {
+                        const enhancedResult = { ...result };
+                        if (!result.success && result.error) {
+                            enhancedResult.error = getErrorMessage(result.error);
+                            enhancedResult.errorCategory = getErrorCategory(result.error);
+                        }
+                        return enhancedResult;
                     });
+
+                    // Format and display batch results using the new error handler
+                    const formattedResults = formatBatchResults(enhancedResults);
+
+                    console.log(`\n📊 SCREEN SCHEME CLEANUP OPERATION RESULTS:`);
+                    console.log(formattedResults);
+
+                    // Log operation summary with detailed statistics
+                    const operationLogger = require('../utils/operationLogger');
+                    const operationId = operationLogger.generateOperationId();
+                    logOperationSummary(operationId, enhancedResults);
+
+                    // Display detailed error information for failures
+                    const failureResults = enhancedResults.filter(r => !r.success);
+                    if (failureResults.length > 0) {
+                        console.log(`\n🔍 DETAILED ERROR ANALYSIS:`);
+                        console.log('='.repeat(60));
+
+                        failureResults.forEach((result, index) => {
+                            console.log(`\n${index + 1}. Screen Scheme: ${result.id}`);
+                            console.log(`   Error: ${result.error}`);
+                            console.log(`   Category: ${result.errorCategory || 'Unknown'}`);
+
+                            // Provide troubleshooting suggestions based on error category
+                            if (result.errorCategory === 'permission') {
+                                console.log(`   💡 Suggestion: Check if you have 'Manage Screen Schemes' permission`);
+                            } else if (result.errorCategory === 'not_found') {
+                                console.log(`   💡 Suggestion: Verify the scheme ID '${result.id}' exists`);
+                            } else if (result.errorCategory === 'validation') {
+                                console.log(`   💡 Suggestion: Scheme may be in use or has dependencies`);
+                            }
+                        });
+                    }
                 }
             }
             loader.start();
@@ -1821,13 +2570,49 @@ async function cleanupComplete(config, execute = false) {
                 } else {
                     const screenIds = unusedScreens.map(s => s.id);
                     const results = await jira.deleteScreens(screenIds);
-                    console.log(`Deletion results de screens (${results.length}):`);
-                    results.forEach(result => {
-                        const message = result.success
-                            ? `✓ Screen ${result.id} deleted successfully.`
-                            : `✗ Error deleting screen ${result.id}: ${result.error}`;
-                        console.log(message);
+
+                    // Transform results to include proper error messages and categories
+                    const enhancedResults = results.map(result => {
+                        const enhancedResult = { ...result };
+                        if (!result.success && result.error) {
+                            enhancedResult.error = getErrorMessage(result.error);
+                            enhancedResult.errorCategory = getErrorCategory(result.error);
+                        }
+                        return enhancedResult;
                     });
+
+                    // Format and display batch results using the new error handler
+                    const formattedResults = formatBatchResults(enhancedResults);
+
+                    console.log(`\n📊 SCREEN CLEANUP OPERATION RESULTS:`);
+                    console.log(formattedResults);
+
+                    // Log operation summary with detailed statistics
+                    const operationLogger = require('../utils/operationLogger');
+                    const operationId = operationLogger.generateOperationId();
+                    logOperationSummary(operationId, enhancedResults);
+
+                    // Display detailed error information for failures
+                    const failureResults = enhancedResults.filter(r => !r.success);
+                    if (failureResults.length > 0) {
+                        console.log(`\n🔍 DETAILED ERROR ANALYSIS:`);
+                        console.log('='.repeat(60));
+
+                        failureResults.forEach((result, index) => {
+                            console.log(`\n${index + 1}. Screen: ${result.id}`);
+                            console.log(`   Error: ${result.error}`);
+                            console.log(`   Category: ${result.errorCategory || 'Unknown'}`);
+
+                            // Provide troubleshooting suggestions based on error category
+                            if (result.errorCategory === 'permission') {
+                                console.log(`   💡 Suggestion: Check if you have 'Manage Screens' permission`);
+                            } else if (result.errorCategory === 'not_found') {
+                                console.log(`   💡 Suggestion: Verify the screen ID '${result.id}' exists`);
+                            } else if (result.errorCategory === 'validation') {
+                                console.log(`   💡 Suggestion: Screen may be in use or has dependencies`);
+                            }
+                        });
+                    }
                 }
             }
             loader.start();
@@ -1844,10 +2629,681 @@ async function cleanupComplete(config, execute = false) {
     } catch (error) {
         loader.stop();
         if (emailLogger) {
-            await emailLogger.sendLog('Cleanup Complete - Erro', `Erro: ${error.message}`);
+            await emailLogger.sendLog('Cleanup Complete - Erro', `Erro: ${getErrorMessage(error)}`);
         }
         throw error;
     }
+}
+
+/**
+ * List field configuration schemes and their project associations
+ */
+async function listFieldConfigurationSchemes(config, options = {}) {
+    const Loader = require('../utils/loader');
+    const loader = new Loader('Searching field configuration schemes');
+    loader.start();
+
+    try {
+        const jira = new JiraApi(config.url, config.email, config.token);
+
+        let schemes = [];
+        let response = null;
+
+        // If category is provided, use the category-specific endpoint
+        if (options.category) {
+            schemes = await jira.getFieldConfigurationSchemesByCategory(options.category);
+            loader.stop();
+
+            if (schemes.length === 0) {
+                console.log(`No field configuration schemes found for category ${options.category}.`);
+                return;
+            }
+
+            const { createFieldConfigurationSchemesByCategoryTable } = require('../utils/table');
+            console.log(createFieldConfigurationSchemesByCategoryTable(schemes));
+            console.log(`\nTotal schemes in category: ${schemes.length}`);
+            return;
+        }
+
+        // If projectId is provided, use the project-specific endpoint
+        if (options.projectId) {
+            // Prepare query parameters for project-specific endpoint
+            const queryParams = {};
+            if (options.startAt !== undefined) queryParams.startAt = options.startAt;
+            if (options.maxResults !== undefined) queryParams.maxResults = options.maxResults;
+            if (options.projectId) queryParams.projectId = options.projectId;
+
+            response = await jira.getFieldConfigurationSchemeProjects(queryParams);
+            schemes = response.values || [];
+        } else {
+            // No project filter, list all field configuration schemes
+            schemes = await jira.listFieldConfigurationSchemes();
+        }
+
+        loader.stop();
+
+        if (schemes.length === 0) {
+            console.log('No field configuration schemes found.');
+            return;
+        }
+
+        const { createFieldConfigurationSchemesTable } = require('../utils/table');
+        console.log(createFieldConfigurationSchemesTable(schemes));
+
+        // Show pagination info if applicable (only for project-specific endpoint)
+        if (response && (options.startAt !== undefined || options.maxResults !== undefined)) {
+            console.log(`\nTotal schemes: ${schemes.length} (out of ${response.total || 0} total)`);
+            if (options.startAt !== undefined) {
+                console.log(`Start at: ${response.startAt || 0}`);
+            }
+            if (response.maxResults !== undefined) {
+                console.log(`Max results: ${response.maxResults}`);
+            }
+            if (response.isLast !== undefined) {
+                console.log(`Is last page: ${response.isLast}`);
+            }
+        } else if (!options.projectId) {
+            // For list all schemes, just show count
+            console.log(`\nTotal schemes: ${schemes.length}`);
+        }
+    } catch (error) {
+        loader.stop();
+        throw error;
+    }
+}
+
+/**
+ * Assign a field configuration scheme to one or more projects or a category
+ */
+async function assignFieldConfigurationScheme(config, projectKeys, schemeId, options = {}) {
+    const jira = new JiraApi(config.url, config.email, config.token);
+
+    // If category is provided, use the category-specific assignment
+    if (options.category) {
+        return await assignFieldConfigurationSchemeToCategory(config, options.category, schemeId, options);
+    }
+
+    // Check if execution mode (default is preview)
+    if (!options.exec) {
+        // Enhanced preview mode with detailed information
+        console.log('\n' + '='.repeat(80));
+        console.log('📋 FIELD CONFIGURATION SCHEME ASSIGNMENT - PREVIEW');
+        console.log('='.repeat(80));
+
+        // 1. Operation scope
+        console.log(`\n📊 OPERATION SCOPE:`);
+        console.log(`   Projects to update: ${projectKeys.length}`);
+        console.log(`   Project keys: ${projectKeys.join(', ')}`);
+
+        // 2. Get current scheme information for each project
+        console.log(`\n🔍 CURRENT SCHEME INFORMATION:`);
+
+        const Table = require('cli-table3');
+        const currentSchemesTable = new Table({
+            head: ['Project Key', 'Current Scheme ID', 'Current Scheme Name', 'Current Description'],
+            colWidths: [15, 20, 30, 40]
+        });
+
+        for (const projectKey of projectKeys) {
+            try {
+                // Get current field configuration scheme for the project
+                const response = await jira.getFieldConfigurationSchemeProjects({ projectId: projectKey });
+                let currentSchemeId = 'default';
+                let currentSchemeName = 'Default Scheme';
+                let currentDescription = 'Default field configuration scheme';
+
+                if (response.values && response.values.length > 0) {
+                    const schemeData = response.values[0];
+                    if (schemeData.fieldConfigurationScheme) {
+                        currentSchemeId = schemeData.fieldConfigurationScheme.id;
+                        currentSchemeName = schemeData.fieldConfigurationScheme.name || 'N/A';
+                        currentDescription = schemeData.fieldConfigurationScheme.description || 'No description';
+                    }
+                }
+
+                currentSchemesTable.push([projectKey, currentSchemeId, currentSchemeName, currentDescription]);
+            } catch (error) {
+                currentSchemesTable.push([projectKey, 'Error', 'Could not fetch', getErrorMessage(error).substring(0, 30) + '...']);
+            }
+        }
+
+        console.log(currentSchemesTable.toString());
+
+        // 3. Get new scheme information
+        console.log(`\n🔄 NEW SCHEME INFORMATION:`);
+
+        let newSchemeId = schemeId || 'default';
+        let newSchemeName = 'Default Scheme';
+        let newDescription = 'Default field configuration scheme';
+
+        if (schemeId) {
+            try {
+                // Get all field configuration schemes to find the one we're assigning
+                const allSchemes = await jira.listFieldConfigurationSchemes();
+                const targetScheme = allSchemes.find(scheme => scheme.id === schemeId);
+
+                if (targetScheme) {
+                    newSchemeName = targetScheme.name || 'N/A';
+                    newDescription = targetScheme.description || 'No description';
+                } else {
+                    newSchemeName = 'Unknown (scheme not found)';
+                    newDescription = 'Could not fetch scheme details';
+                }
+            } catch (error) {
+                newSchemeName = 'Error fetching details';
+                newDescription = getErrorMessage(error).substring(0, 40) + '...';
+            }
+        }
+
+        console.log(`   Scheme ID: ${newSchemeId}`);
+        console.log(`   Scheme Name: ${newSchemeName}`);
+        console.log(`   Description: ${newDescription}`);
+
+        // 4. Summary of changes
+        console.log(`\n📈 SUMMARY OF CHANGES:`);
+        console.log(`   • ${projectKeys.length} projects will be updated`);
+        console.log(`   • Current scheme: ${currentSchemesTable[0]?.[2] || 'Default Scheme'} → New scheme: ${newSchemeName}`);
+        console.log(`   • Operation type: ${schemeId ? 'Custom scheme assignment' : 'Default scheme assignment'}`);
+
+        // 5. Warnings and recommendations
+        console.log(`\n⚠️  RECOMMENDATIONS:`);
+        console.log(`   • Review the current and new scheme information above`);
+        console.log(`   • Ensure the new scheme is appropriate for the project types`);
+        console.log(`   • Field configuration schemes affect which fields are available in issues`);
+
+        // 6. Execution instructions
+        console.log(`\n🚀 TO EXECUTE THIS OPERATION:`);
+        console.log(`   Add the --exec option to your command`);
+        console.log(`\n` + '='.repeat(80));
+        console.log(`[PREVIEW] This is a preview only. No changes have been made.`);
+        console.log('='.repeat(80) + '\n');
+
+        return { preview: true, projectKeys, schemeId };
+    }
+
+    // Execution mode
+    console.log(`\n🚀 EXECUTING FIELD CONFIGURATION SCHEME ASSIGNMENT`);
+    console.log(`   Projects: ${projectKeys.length}`);
+    console.log(`   Scheme: ${schemeId || 'default'}`);
+    console.log('='.repeat(60));
+
+    const results = await jira.assignFieldConfigurationScheme(projectKeys, schemeId);
+
+    // Transform results to include proper error messages and categories
+    const enhancedResults = results.map(result => {
+        const enhancedResult = { ...result };
+        if (!result.success && result.error) {
+            enhancedResult.error = getErrorMessage(result.error);
+            enhancedResult.errorCategory = getErrorCategory(result.error);
+            // Add context about why it might have failed
+            if (enhancedResult.error.includes('already has') || enhancedResult.error.includes('already assigned')) {
+                enhancedResult.context = 'Project already has this scheme assigned';
+            } else if (enhancedResult.error.includes('permission') || enhancedResult.error.includes('forbidden')) {
+                enhancedResult.context = 'Insufficient permissions to modify field configuration scheme';
+            } else if (enhancedResult.error.includes('not found') || enhancedResult.error.includes('does not exist')) {
+                enhancedResult.context = 'Project or scheme not found';
+            } else if (enhancedResult.error.includes('validation') || enhancedResult.error.includes('invalid')) {
+                enhancedResult.context = 'Validation error - check scheme compatibility';
+            }
+        }
+        return enhancedResult;
+    });
+
+    // Format and display batch results using the new error handler
+    const formattedResults = formatBatchResults(enhancedResults);
+
+    console.log(`\n📊 BATCH OPERATION RESULTS:`);
+    console.log(formattedResults);
+
+    // Log operation summary with detailed statistics
+    const operationLogger = require('../utils/operationLogger');
+    const operationId = operationLogger.generateOperationId();
+    logOperationSummary(operationId, enhancedResults);
+
+    // Display detailed error information for failures
+    const failureResults = enhancedResults.filter(r => !r.success);
+    if (failureResults.length > 0) {
+        console.log(`\n🔍 DETAILED ERROR ANALYSIS:`);
+        console.log('='.repeat(60));
+
+        failureResults.forEach((result, index) => {
+            console.log(`\n${index + 1}. Project: ${result.identifier}`);
+            console.log(`   Error: ${result.error}`);
+            console.log(`   Category: ${result.errorCategory || 'Unknown'}`);
+            if (result.context) {
+                console.log(`   Context: ${result.context}`);
+            }
+
+            // Provide troubleshooting suggestions based on error category
+            if (result.errorCategory === 'permission') {
+                console.log(`   💡 Suggestion: Check if you have 'Manage Projects' permission for this project`);
+            } else if (result.errorCategory === 'not_found') {
+                console.log(`   💡 Suggestion: Verify the project key '${result.identifier}' exists and is accessible`);
+            } else if (result.errorCategory === 'validation') {
+                console.log(`   💡 Suggestion: Ensure the field configuration scheme is compatible with the project type`);
+            } else if (result.error.includes('already has')) {
+                console.log(`   💡 Suggestion: The project already has this scheme - no action needed`);
+            }
+        });
+
+        console.log(`\n📋 FAILURE SUMMARY:`);
+        console.log(`   • Total failures: ${failureResults.length}`);
+        console.log(`   • Success rate: ${((enhancedResults.length - failureResults.length) / enhancedResults.length * 100).toFixed(1)}%`);
+
+        // Group failures by error category for analysis
+        const failuresByCategory = {};
+        failureResults.forEach(result => {
+            const category = result.errorCategory || 'unknown';
+            failuresByCategory[category] = (failuresByCategory[category] || 0) + 1;
+        });
+
+        if (Object.keys(failuresByCategory).length > 0) {
+            console.log(`\n📊 FAILURE CATEGORIES:`);
+            Object.entries(failuresByCategory).forEach(([category, count]) => {
+                console.log(`   • ${category}: ${count} failure(s)`);
+            });
+        }
+    }
+
+    console.log(`\n🎯 OPERATION COMPLETE`);
+    console.log(`   Operation ID: ${operationId}`);
+    console.log(`   Total processed: ${enhancedResults.length}`);
+    console.log(`   Successes: ${enhancedResults.filter(r => r.success).length}`);
+    console.log(`   Failures: ${failureResults.length}`);
+    console.log(`   Success rate: ${((enhancedResults.length - failureResults.length) / enhancedResults.length * 100).toFixed(1)}%`);
+}
+
+/**
+ * List field configuration schemes by project category
+ */
+async function listFieldConfigurationSchemesByCategory(config, categoryId) {
+    const Loader = require('../utils/loader');
+    const loader = new Loader(`Searching field configuration schemes for category ${categoryId}`);
+    loader.start();
+
+    try {
+        const jira = new JiraApi(config.url, config.email, config.token);
+        const schemes = await jira.getFieldConfigurationSchemesByCategory(categoryId);
+
+        if (schemes.length === 0) {
+            console.log(`No field configuration schemes found for category ${categoryId}.`);
+            return;
+        }
+
+        const { createFieldConfigurationSchemesByCategoryTable } = require('../utils/table');
+        console.log(createFieldConfigurationSchemesByCategoryTable(schemes));
+        console.log(`\nTotal schemes in category: ${schemes.length}`);
+    } catch (error) {
+        throw error;
+    } finally {
+        loader.stop();
+    }
+}
+
+/**
+ * Assign a field configuration scheme to all projects in a category
+ */
+async function assignFieldConfigurationSchemeToCategory(config, categoryId, schemeId, options = {}) {
+    const Loader = require('../utils/loader');
+    const loader = new Loader(`Assigning field configuration scheme ${schemeId || 'default'} to category ${categoryId}`);
+
+    try {
+        const jira = new JiraApi(config.url, config.email, config.token);
+
+        // Check if execution mode (default is preview)
+        if (!options.exec) {
+            // Enhanced preview mode with detailed information
+            console.log('\n' + '='.repeat(80));
+            console.log('📋 FIELD CONFIGURATION SCHEME ASSIGNMENT - CATEGORY PREVIEW');
+            console.log('='.repeat(80));
+
+            // 1. Operation scope
+            console.log(`\n📊 OPERATION SCOPE:`);
+            console.log(`   Category ID: ${categoryId}`);
+
+            // Get category details if possible
+            loader.start();
+            try {
+                const categories = await jira.listCategories();
+                const category = categories.find(c => c.id === categoryId);
+                if (category) {
+                    loader.stop();
+                    console.log(`   Category Name: ${category.name || 'N/A'}`);
+                    console.log(`   Category Description: ${category.description || 'No description'}`);
+                } else {
+                    loader.stop();
+                }
+            } catch (error) {
+                loader.stop();
+                // Silently continue if we can't fetch category details
+            }
+
+            // 2. Get projects in the category
+            console.log(`\n🔍 PROJECTS IN CATEGORY:`);
+
+            loader.start();
+            const projects = await jira.listProjectsByCategory(categoryId);
+            loader.stop();
+            console.log(`   Total projects in category: ${projects.length}`);
+
+            if (projects.length === 0) {
+                console.log(`   No projects found in category ${categoryId}.`);
+                console.log(`\n` + '='.repeat(80));
+                console.log(`[PREVIEW] This is a preview only. No changes have been made.`);
+                console.log('='.repeat(80) + '\n');
+                return { preview: true, categoryId, schemeId, projectCount: 0 };
+            }
+
+            // 3. Get current scheme information for each project
+            console.log(`\n📋 CURRENT SCHEME INFORMATION FOR PROJECTS:`);
+
+            const Table = require('cli-table3');
+            const currentSchemesTable = new Table({
+                head: ['Project Key', 'Project Name', 'Current Scheme ID', 'Current Scheme Name', 'Current Description'],
+                colWidths: [15, 25, 20, 25, 40]
+            });
+
+            let projectsWithErrors = 0;
+
+            loader.start();
+            for (const project of projects) {
+                try {
+                    // Get current field configuration scheme for the project
+                    const response = await jira.getFieldConfigurationSchemeProjects({ projectId: project.key });
+                    let currentSchemeId = 'default';
+                    let currentSchemeName = 'Default Scheme';
+                    let currentDescription = 'Default field configuration scheme';
+
+                    if (response.values && response.values.length > 0) {
+                        const schemeData = response.values[0];
+                        if (schemeData.fieldConfigurationScheme) {
+                            currentSchemeId = schemeData.fieldConfigurationScheme.id;
+                            currentSchemeName = schemeData.fieldConfigurationScheme.name || 'N/A';
+                            currentDescription = schemeData.fieldConfigurationScheme.description || 'No description';
+                        }
+                    }
+
+                    currentSchemesTable.push([project.key, project.name || 'N/A', currentSchemeId, currentSchemeName, currentDescription]);
+                } catch (error) {
+                    currentSchemesTable.push([project.key, project.name || 'N/A', 'Error', 'Could not fetch', getErrorMessage(error).substring(0, 30) + '...']);
+                    projectsWithErrors++;
+                }
+            }
+            loader.stop();
+
+            console.log(currentSchemesTable.toString());
+
+            if (projectsWithErrors > 0) {
+                console.log(`\n⚠️  Note: ${projectsWithErrors} project(s) had errors fetching current scheme information.`);
+            }
+
+            // 4. Get new scheme information
+            console.log(`\n🔄 NEW SCHEME INFORMATION:`);
+
+            let newSchemeId = schemeId || 'default';
+            let newSchemeName = 'Default Scheme';
+            let newDescription = 'Default field configuration scheme';
+
+            if (schemeId) {
+                loader.start();
+                try {
+                    // Get all field configuration schemes to find the one we're assigning
+                    const allSchemes = await jira.listFieldConfigurationSchemes();
+                    const targetScheme = allSchemes.find(scheme => scheme.id === schemeId);
+                    loader.stop();
+
+                    if (targetScheme) {
+                        newSchemeName = targetScheme.name || 'N/A';
+                        newDescription = targetScheme.description || 'No description';
+                    } else {
+                        newSchemeName = 'Unknown (scheme not found)';
+                        newDescription = 'Could not fetch scheme details';
+                    }
+                } catch (error) {
+                    loader.stop();
+                    newSchemeName = 'Error fetching details';
+                    newDescription = getErrorMessage(error).substring(0, 40) + '...';
+                }
+            }
+
+            console.log(`   Scheme ID: ${newSchemeId}`);
+            console.log(`   Scheme Name: ${newSchemeName}`);
+            console.log(`   Description: ${newDescription}`);
+
+            // 5. Summary of changes
+            console.log(`\n📈 SUMMARY OF CHANGES:`);
+            console.log(`   • ${projects.length} projects in category will be updated`);
+            console.log(`   • Current scheme: ${currentSchemesTable[0]?.[3] || 'Default Scheme'} → New scheme: ${newSchemeName}`);
+            console.log(`   • Operation type: ${schemeId ? 'Custom scheme assignment' : 'Default scheme assignment'}`);
+            console.log(`   • Scope: Category-based (all projects in category ${categoryId})`);
+
+            // 6. Warnings and recommendations
+            console.log(`\n⚠️  RECOMMENDATIONS:`);
+            console.log(`   • Review the current and new scheme information above`);
+            console.log(`   • Ensure the new scheme is appropriate for all project types in this category`);
+            console.log(`   • Field configuration schemes affect which fields are available in issues`);
+            console.log(`   • Category-based assignments affect ALL projects in the category`);
+            console.log(`   • Consider testing with a single project first using the -k option`);
+
+            // 7. Execution instructions
+            console.log(`\n🚀 TO EXECUTE THIS OPERATION:`);
+            console.log(`   Add the --exec option to your command`);
+
+            console.log(`\n` + '='.repeat(80));
+            console.log(`[PREVIEW] This is a preview only. No changes have been made.`);
+            console.log('='.repeat(80) + '\n');
+
+            return { preview: true, categoryId, schemeId, projectCount: projects.length };
+        }
+
+        // Execution mode
+        console.log(`\n🚀 EXECUTING FIELD CONFIGURATION SCHEME ASSIGNMENT`);
+        console.log(`   Category: ${categoryId}`);
+        console.log(`   Scheme: ${schemeId || 'default'}`);
+
+        const results = await jira.assignFieldConfigurationSchemeToCategory(categoryId, schemeId);
+
+        // Display results
+        const { createFieldConfigurationSchemeAssignmentTable } = require('../utils/table');
+        console.log(createFieldConfigurationSchemeAssignmentTable(results));
+
+        const successCount = results.filter(r => r.success).length;
+        const failureCount = results.length - successCount;
+
+        console.log(`\n📊 ASSIGNMENT SUMMARY:`);
+        console.log(`   Total projects: ${results.length}`);
+        console.log(`   Successful: ${successCount}`);
+        console.log(`   Failed: ${failureCount}`);
+        console.log(`   Success rate: ${((successCount / results.length) * 100).toFixed(1)}%`);
+
+        if (failureCount > 0) {
+            console.log(`\n❌ FAILURES:`);
+            results.filter(r => !r.success).forEach(result => {
+                console.log(`   • ${result.projectKey}: ${result.error}`);
+            });
+        }
+
+        return results;
+    } catch (error) {
+        throw error;
+    } finally {
+        loader.stop();
+    }
+}
+
+/**
+ * List screen schemes by project category
+ */
+async function listScreenSchemesByCategory(config, categoryId) {
+    const Loader = require('../utils/loader');
+    const loader = new Loader(`Searching screen schemes for category ${categoryId}`);
+    loader.start();
+
+    try {
+        const jira = new JiraApi(config.url, config.email, config.token);
+        const schemes = await jira.getScreenSchemesByCategory(categoryId);
+        loader.stop();
+
+        if (schemes.length === 0) {
+            console.log(`No screen schemes found for category ${categoryId}.`);
+            return;
+        }
+
+        const { createScreenSchemesByCategoryTable } = require('../utils/table');
+        console.log(createScreenSchemesByCategoryTable(schemes));
+        console.log(`\nTotal screen schemes in category: ${schemes.length}`);
+    } catch (error) {
+        loader.stop();
+        throw error;
+    }
+}
+
+/**
+ * Assign a screen scheme to all projects in a category
+ */
+async function assignScreenSchemeToCategory(config, categoryId, schemeId, options = {}) {
+    const Loader = require('../utils/loader');
+    const loader = new Loader(`Assigning screen scheme ${schemeId} to category ${categoryId}`);
+    loader.start();
+
+    try {
+        const jira = new JiraApi(config.url, config.email, config.token);
+
+        // Check if execution mode (default is preview)
+        if (!options.exec) {
+            loader.stop();
+            console.log(`[PREVIEW] Screen scheme ${schemeId} would be assigned to all projects in category ${categoryId}`);
+            console.log(`[PREVIEW] To execute assignment, add the --exec option`);
+            return { preview: true, categoryId, schemeId };
+        }
+
+        const result = await jira.assignScreenSchemeToCategory(categoryId, schemeId);
+        loader.stop();
+
+        if (result.success) {
+            console.log(`✓ Screen scheme ${schemeId} assigned to category ${categoryId} successfully.`);
+            if (result.projectCount) {
+                console.log(`  Affected projects: ${result.projectCount}`);
+            }
+        } else {
+            console.log(`✗ Error assigning screen scheme to category ${categoryId}: ${result.error}`);
+        }
+    } catch (error) {
+        loader.stop();
+        throw error;
+    }
+}
+
+/**
+ * Assign a screen scheme to one or more projects or a category
+ */
+async function assignScreenScheme(config, projectKeys, schemeId, options = {}) {
+    const jira = new JiraApi(config.url, config.email, config.token);
+
+    // If category is provided, use the category-specific assignment
+    if (options.category) {
+        return await assignScreenSchemeToCategory(config, options.category, schemeId, options);
+    }
+
+    // Check if execution mode (default is preview)
+    if (!options.exec) {
+        // Enhanced preview mode with detailed information
+        console.log('\n' + '='.repeat(80));
+        console.log('📋 SCREEN SCHEME ASSIGNMENT - PREVIEW');
+        console.log('='.repeat(80));
+
+        // 1. Operation scope
+        console.log(`\n📊 OPERATION SCOPE:`);
+        console.log(`   Projects to update: ${projectKeys.length}`);
+        console.log(`   Project keys: ${projectKeys.join(', ')}`);
+
+        // 2. Get current scheme information for each project
+        console.log(`\n🔍 CURRENT SCHEME INFORMATION:`);
+
+        const Table = require('cli-table3');
+        const currentSchemesTable = new Table({
+            head: ['Project Key', 'Current Scheme ID', 'Current Scheme Name', 'Current Description'],
+            colWidths: [15, 20, 30, 40]
+        });
+
+        for (const projectKey of projectKeys) {
+            try {
+                // Note: Jira API doesn't have a direct method to get current screen scheme for a project
+                // We'll show a placeholder for now
+                currentSchemesTable.push([projectKey, 'Unknown', 'Could not fetch', 'Screen scheme info not available']);
+            } catch (error) {
+                currentSchemesTable.push([projectKey, 'Error', 'Could not fetch', getErrorMessage(error).substring(0, 30) + '...']);
+            }
+        }
+
+        console.log(currentSchemesTable.toString());
+
+        // 3. Get new scheme information
+        console.log(`\n🔄 NEW SCHEME INFORMATION:`);
+
+        let newSchemeId = schemeId || 'default';
+        let newSchemeName = 'Default Scheme';
+        let newDescription = 'Default screen scheme';
+
+        if (schemeId) {
+            try {
+                // Get all screen schemes to find the one we're assigning
+                const allSchemes = await jira.listScreenSchemes();
+                const targetScheme = allSchemes.find(scheme => scheme.id === schemeId);
+
+                if (targetScheme) {
+                    newSchemeName = targetScheme.name || 'N/A';
+                    newDescription = targetScheme.description || 'No description';
+                } else {
+                    newSchemeName = 'Unknown (scheme not found)';
+                    newDescription = 'Could not fetch scheme details';
+                }
+            } catch (error) {
+                newSchemeName = 'Error fetching details';
+                newDescription = getErrorMessage(error).substring(0, 40) + '...';
+            }
+        }
+
+        console.log(`   Scheme ID: ${newSchemeId}`);
+        console.log(`   Scheme Name: ${newSchemeName}`);
+        console.log(`   Description: ${newDescription}`);
+
+        // 4. Summary of changes
+        console.log(`\n📈 SUMMARY OF CHANGES:`);
+        console.log(`   • ${projectKeys.length} projects will be updated`);
+        console.log(`   • Current scheme: Unknown → New scheme: ${newSchemeName}`);
+        console.log(`   • Operation type: ${schemeId ? 'Custom scheme assignment' : 'Default scheme assignment'}`);
+
+        // 5. Warnings and recommendations
+        console.log(`\n⚠️  RECOMMENDATIONS:`);
+        console.log(`   • Screen scheme assignment for individual projects is not yet implemented in the Jira API`);
+        console.log(`   • This preview shows what would happen if the feature were available`);
+        console.log(`   • Consider using category-based assignment instead`);
+
+        // 6. Execution instructions
+        console.log(`\n🚀 TO EXECUTE THIS OPERATION:`);
+        console.log(`   Add the --exec option to your command`);
+        console.log(`\n` + '='.repeat(80));
+        console.log(`[PREVIEW] This is a preview only. No changes have been made.`);
+        console.log('='.repeat(80) + '\n');
+
+        return { preview: true, projectKeys, schemeId };
+    }
+
+    // Execution mode
+    console.log(`\n🚀 EXECUTING SCREEN SCHEME ASSIGNMENT`);
+    console.log(`   Projects: ${projectKeys.length}`);
+    console.log(`   Scheme: ${schemeId || 'default'}`);
+    console.log('='.repeat(60));
+
+    // Note: Jira API doesn't have assignScreenScheme method for individual projects
+    // We'll show a message that this feature is not yet implemented
+    console.log(`\n❌ SCREEN SCHEME ASSIGNMENT NOT IMPLEMENTED`);
+    console.log(`   The Jira API does not currently support assigning screen schemes to individual projects.`);
+    console.log(`   This feature is only available for category-based assignments.`);
+    console.log(`   Use the --category option to assign screen schemes to all projects in a category.`);
+
+    return { success: false, error: 'Screen scheme assignment to individual projects not implemented in Jira API' };
 }
 
 const commands = {
@@ -1858,6 +3314,7 @@ const commands = {
     updateProjectName,
     updateProjectCategory,
     updateProjectsCategory,
+    projectDetails,
     listProjectsByCategory,
     deleteProjects,
     listWorkflows,
@@ -1886,6 +3343,13 @@ const commands = {
     copyIssueFieldsValues,
     copyIssueFieldsValuesBatch,
     undoFieldOperation,
+    listFieldConfigurationSchemes,
+    assignFieldConfigurationScheme,
+    listFieldConfigurationSchemesByCategory,
+    assignFieldConfigurationSchemeToCategory,
+    listScreenSchemesByCategory,
+    assignScreenSchemeToCategory,
+    assignScreenScheme,
 
 };
 
@@ -1898,31 +3362,31 @@ module.exports = applyTimeoutToObject(commands, 120000);
  */
 function displayRateLimitInfo(jira) {
     const rateLimitInfo = jira.getRateLimitInfo();
-    
+
     if (rateLimitInfo.summary.totalHits > 0) {
         console.log('\n' + '='.repeat(60));
         console.log('⚠️  RATE LIMIT INFORMATION');
         console.log('='.repeat(60));
         console.log(`Total rate limit hits: ${rateLimitInfo.summary.totalHits}`);
-        
+
         if (rateLimitInfo.summary.reasons) {
             console.log('\nRate limit reasons:');
             Object.entries(rateLimitInfo.summary.reasons).forEach(([reason, count]) => {
                 console.log(`  • ${reason}: ${count} times`);
             });
         }
-        
+
         if (rateLimitInfo.summary.operations) {
             console.log('\nAffected operations:');
             Object.entries(rateLimitInfo.summary.operations).forEach(([operation, count]) => {
                 console.log(`  • ${operation}: ${count} times`);
             });
         }
-        
+
         if (rateLimitInfo.summary.firstHit && rateLimitInfo.summary.lastHit) {
             console.log(`\nTime range: ${rateLimitInfo.summary.firstHit} to ${rateLimitInfo.summary.lastHit}`);
         }
-        
+
         console.log('\nAll rate limits were handled automatically with retry logic.');
         console.log('Your operations completed successfully despite the rate limiting.');
         console.log('='.repeat(60));

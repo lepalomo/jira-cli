@@ -1,5 +1,6 @@
 const JiraApi = require('../services/jiraApi');
 const { extractTextFromDoc } = require('../utils/docExtractor');
+const { getErrorMessage } = require('./errorHandler');
 
 async function undoFieldOperation(config, options = {}) {
     const Loader = require('../utils/loader');
@@ -246,7 +247,7 @@ async function undoFieldOperation(config, options = {}) {
                 results.push({ issueKey: operation.issueKey, success: true });
                 console.log(`✓ ${operation.issueKey}: Reverted to previous value`);
             } catch (error) {
-                const errorMsg = error.response?.data?.errorMessages?.[0] || error.message;
+                const errorMsg = getErrorMessage(error);
                 results.push({ issueKey: operation.issueKey, success: false, error: errorMsg });
                 console.log(`✗ ${operation.issueKey}: ${errorMsg}`);
             }

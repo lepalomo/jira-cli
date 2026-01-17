@@ -3,14 +3,18 @@
 const { Command } = require('commander');
 const { loadConfig, saveConfig } = require('./src/commands/config');
 const { validateConfig } = require('./src/utils/configCheck');
+const { overrideHelpInformation } = require('./src/utils/helpFormatter');
+const { getErrorMessage } = require('./src/utils/errorHandler');
 const {
     listProjects, listCategories, archiveProject, archiveProjects, updateProjectName, updateProjectCategory,
-    updateProjectsCategory, listProjectsByCategory, deleteProjects, listWorkflows, deleteWorkflows,
+    updateProjectsCategory, projectDetails, listProjectsByCategory, deleteProjects, listWorkflows, deleteWorkflows,
     deleteWorkflowSchemes, listWorkflowSchemes, cleanupWorkflows, cleanupWorkflowSchemes, cleanupComplete,
     listIssueTypeScreenSchemes, deleteIssueTypeScreenSchemes, listIssueTypeSchemes, deleteIssueTypeSchemes,
     listIssueTypes, deleteIssueTypes, listScreenSchemes, deleteScreenSchemes, listScreens, deleteScreens,
     listFields, getIssue, searchIssues, getIssuesBatch, setIssueFieldValue, setIssueFieldValueBatch,
-    copyIssueFieldsValues, copyIssueFieldsValuesBatch, undoFieldOperation
+    copyIssueFieldsValues, copyIssueFieldsValuesBatch, undoFieldOperation,
+    listFieldConfigurationSchemes, assignFieldConfigurationScheme, assignFieldConfigurationSchemeToCategory,
+    assignScreenScheme, assignScreenSchemeToCategory
 } = require('./src/commands/commands');
 
 const program = new Command();
@@ -57,7 +61,7 @@ program.command('list-project-categories')
         try {
             await listCategories(config);
         } catch (error) {
-            console.error('Error fetching categories:', error.response ? error.response.data : error.message);
+            console.error('Error fetching categories:', getErrorMessage(error));
         }
     });
 
@@ -73,12 +77,13 @@ program.command('list-projects-by-category')
         try {
             await listProjectsByCategory(config, options.category);
         } catch (error) {
-            console.error('Error fetching projects by category:', error.response ? error.response.data : error.message);
+            console.error('Error fetching projects by category:', getErrorMessage(error));
         }
     });
 
 program.command('list-projects')
     .description('List active projects in the Jira instance')
+    .option('-c, --category <categoryId>', 'Filter by project category ID')
     .option('-u, --url <url>', 'Jira instance URL')
     .option('-e, --email <email>', 'Jira user email')
     .option('-t, --token <token>', 'Jira API token')
@@ -86,9 +91,13 @@ program.command('list-projects')
         const config = { ...loadConfig(), ...options };
         if (!validateConfig(config)) return;
         try {
-            await listProjects(config);
+            if (options.category) {
+                await listProjectsByCategory(config, options.category);
+            } else {
+                await listProjects(config);
+            }
         } catch (error) {
-            console.error('Error fetching projects:', error.response ? error.response.data : error.message);
+            console.error('Error fetching projects:', getErrorMessage(error));
         }
     });
 
@@ -104,7 +113,7 @@ program.command('archive-project')
         try {
             await archiveProject(config, options.key);
         } catch (error) {
-            console.error('Error archiving project:', error.response ? error.response.data : error.message);
+            console.error('Error archiving project:', getErrorMessage(error));
         }
     });
 
@@ -121,7 +130,7 @@ program.command('archive-projects')
         try {
             await archiveProjects(config, projectKeys);
         } catch (error) {
-            console.error('Error archiving projects:', error.response ? error.response.data : error.message);
+            console.error('Error archiving projects:', getErrorMessage(error));
         }
     });
 
@@ -138,7 +147,7 @@ program.command('update-project-name')
         try {
             await updateProjectName(config, options.key, options.name);
         } catch (error) {
-            console.error('Error updating project name:', error.response ? error.response.data : error.message);
+            console.error('Error updating project name:', getErrorMessage(error));
         }
     });
 
@@ -155,7 +164,7 @@ program.command('update-project-category')
         try {
             await updateProjectCategory(config, options.key, options.category);
         } catch (error) {
-            console.error('Error updating project category:', error.response ? error.response.data : error.message);
+            console.error('Error updating project category:', getErrorMessage(error));
         }
     });
 
@@ -173,7 +182,23 @@ program.command('update-projects-category')
         try {
             await updateProjectsCategory(config, projectKeys, options.category);
         } catch (error) {
-            console.error('Error updating projects category:', error.response ? error.response.data : error.message);
+            console.error('Error updating projects category:', getErrorMessage(error));
+        }
+    });
+
+program.command('project-details')
+    .description('Show detailed information about a project including boards and workflows')
+    .requiredOption('-k, --key <key>', 'Project key')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!validateConfig(config)) return;
+        try {
+            await projectDetails(config, options.key);
+        } catch (error) {
+            console.error('Error fetching project details:', getErrorMessage(error));
         }
     });
 
@@ -190,7 +215,7 @@ program.command('delete-projects')
         try {
             await deleteProjects(config, projectKeys);
         } catch (error) {
-            console.error('Error deleting projects:', error.response ? error.response.data : error.message);
+            console.error('Error deleting projects:', getErrorMessage(error));
         }
     });
 
@@ -205,7 +230,7 @@ program.command('list-workflow-schemes')
         try {
             await listWorkflowSchemes(config);
         } catch (error) {
-            console.error('Error fetching workflow schemes:', error.response ? error.response.data : error.message);
+            console.error('Error fetching workflow schemes:', getErrorMessage(error));
         }
     });
 
@@ -239,7 +264,7 @@ program.command('delete-workflow-schemes')
                 await deleteWorkflowSchemes(config, schemeIds, { unused: false, exec: false });
             }
         } catch (error) {
-            console.error('Error deleting workflow schemes:', error.response ? error.response.data : error.message);
+            console.error('Error deleting workflow schemes:', getErrorMessage(error));
         }
     });
 
@@ -265,7 +290,7 @@ program.command('list-workflows')
         try {
             await listWorkflows(config, isActive);
         } catch (error) {
-            console.error('Error fetching workflows:', error.response ? error.response.data : error.message);
+            console.error('Error fetching workflows:', getErrorMessage(error));
         }
     });
 
@@ -299,7 +324,7 @@ program.command('delete-workflows')
                 await deleteWorkflows(config, workflowIds, { unused: false, exec: false });
             }
         } catch (error) {
-            console.error('Error deleting workflows:', error.response ? error.response.data : error.message);
+            console.error('Error deleting workflows:', getErrorMessage(error));
         }
     });
 
@@ -314,7 +339,7 @@ program.command('list-issue-type-screen-schemes')
         try {
             await listIssueTypeScreenSchemes(config);
         } catch (error) {
-            console.error('Error fetching issue type screen schemes:', error.response ? error.response.data : error.message);
+            console.error('Error fetching issue type screen schemes:', getErrorMessage(error));
         }
     });
 
@@ -348,7 +373,7 @@ program.command('delete-issue-type-screen-schemes')
                 await deleteIssueTypeScreenSchemes(config, schemeIds, { unused: false, exec: false });
             }
         } catch (error) {
-            console.error('Error deleting issue type screen schemes:', error.response ? error.response.data : error.message);
+            console.error('Error deleting issue type screen schemes:', getErrorMessage(error));
         }
     });
 
@@ -363,7 +388,7 @@ program.command('list-issue-type-schemes')
         try {
             await listIssueTypeSchemes(config);
         } catch (error) {
-            console.error('Error fetching issue type schemes:', error.response ? error.response.data : error.message);
+            console.error('Error fetching issue type schemes:', getErrorMessage(error));
         }
     });
 
@@ -397,7 +422,7 @@ program.command('delete-issue-type-schemes')
                 await deleteIssueTypeSchemes(config, schemeIds, { unused: false, exec: false });
             }
         } catch (error) {
-            console.error('Error deleting issue type schemes:', error.response ? error.response.data : error.message);
+            console.error('Error deleting issue type schemes:', getErrorMessage(error));
         }
     });
 
@@ -412,7 +437,7 @@ program.command('list-issue-types')
         try {
             await listIssueTypes(config);
         } catch (error) {
-            console.error('Error fetching issue types:', error.response ? error.response.data : error.message);
+            console.error('Error fetching issue types:', getErrorMessage(error));
         }
     });
 
@@ -429,22 +454,29 @@ program.command('delete-issue-types')
         try {
             await deleteIssueTypes(config, issueTypeIds);
         } catch (error) {
-            console.error('Error deleting issue types:', error.response ? error.response.data : error.message);
+            console.error('Error deleting issue types:', getErrorMessage(error));
         }
     });
 
 program.command('list-screen-schemes')
     .description('List screen schemes')
+    .option('-c, --category <categoryId>', 'Filter by project category ID')
     .option('-u, --url <url>', 'Jira instance URL')
     .option('-e, --email <email>', 'Jira user email')
     .option('-t, --token <token>', 'Jira API token')
     .action(async (options) => {
         const config = { ...loadConfig(), ...options };
         if (!validateConfig(config)) return;
+        
+        const apiOptions = {};
+        if (options.category) {
+            apiOptions.category = options.category;
+        }
+        
         try {
-            await listScreenSchemes(config);
+            await listScreenSchemes(config, apiOptions);
         } catch (error) {
-            console.error('Error fetching screen schemes:', error.response ? error.response.data : error.message);
+            console.error('Error fetching screen schemes:', getErrorMessage(error));
         }
     });
 
@@ -478,7 +510,7 @@ program.command('delete-screen-schemes')
                 await deleteScreenSchemes(config, schemeIds, { unused: false, exec: false });
             }
         } catch (error) {
-            console.error('Error deleting screen schemes:', error.response ? error.response.data : error.message);
+            console.error('Error deleting screen schemes:', getErrorMessage(error));
         }
     });
 
@@ -494,7 +526,7 @@ program.command('list-screens')
         try {
             await listScreens(config, options.screenSchemeId);
         } catch (error) {
-            console.error('Error fetching screens:', error.response ? error.response.data : error.message);
+            console.error('Error fetching screens:', getErrorMessage(error));
         }
     });
 
@@ -511,7 +543,7 @@ program.command('delete-screens')
         try {
             await deleteScreens(config, screenIds);
         } catch (error) {
-            console.error('Error deleting screens:', error.response ? error.response.data : error.message);
+            console.error('Error deleting screens:', getErrorMessage(error));
         }
     });
 
@@ -546,7 +578,7 @@ program.command('list-fields')
         try {
             await listFields(config, parsedOptions);
         } catch (error) {
-            console.error('Error fetching fields:', error.response ? error.response.data : error.message);
+            console.error('Error fetching fields:', getErrorMessage(error));
         }
     });
 
@@ -572,7 +604,7 @@ program.command('cleanup')
             try {
                 await cleanupComplete(config, options.exec);
             } catch (error) {
-                console.error('Error during complete cleanup:', error.response ? error.response.data : error.message);
+                console.error('Error during complete cleanup:', getErrorMessage(error));
             }
             return;
         }
@@ -589,7 +621,7 @@ program.command('cleanup')
                 await cleanupWorkflowSchemes(config, options.exec);
             }
         } catch (error) {
-            console.error('Error during cleanup:', error.response ? error.response.data : error.message);
+            console.error('Error during cleanup:', getErrorMessage(error));
         }
     });
 
@@ -614,7 +646,7 @@ program.command('get-issue')
             
             await getIssue(config, options.issue, apiOptions);
         } catch (error) {
-            console.error('Error fetching issue:', error.response ? error.response.data : error.message);
+            console.error('Error fetching issue:', getErrorMessage(error));
         }
     });
 
@@ -643,7 +675,7 @@ program.command('search-issues')
             
             await searchIssues(config, options.jql, apiOptions);
         } catch (error) {
-            console.error('Error searching issues:', error.response ? error.response.data : error.message);
+            console.error('Error searching issues:', getErrorMessage(error));
         }
     });
 
@@ -666,7 +698,7 @@ program.command('get-issues-batch')
             
             await getIssuesBatch(config, issueIdsOrKeys, apiOptions);
         } catch (error) {
-            console.error('Error fetching issues batch:', error.response ? error.response.data : error.message);
+            console.error('Error fetching issues batch:', getErrorMessage(error));
         }
     });
 
@@ -692,7 +724,7 @@ program.command('set-issue-field-value')
             
             await setIssueFieldValue(config, options.issue, options.field, options.value, apiOptions);
         } catch (error) {
-            console.error('Error setting field value:', error.response ? error.response.data : error.message);
+            console.error('Error setting field value:', getErrorMessage(error));
         }
     });
 
@@ -719,7 +751,7 @@ program.command('set-issue-field-value-batch')
             
             await setIssueFieldValueBatch(config, issueIdsOrKeys, options.field, options.value, apiOptions);
         } catch (error) {
-            console.error('Error setting field values batch:', error.response ? error.response.data : error.message);
+            console.error('Error setting field values batch:', getErrorMessage(error));
         }
     });
 
@@ -748,7 +780,7 @@ program.command('copy-issue-fields-values')
             
             await copyIssueFieldsValues(config, options.issue, sourceFields, options.targetField, apiOptions);
         } catch (error) {
-            console.error('Error copying field values:', error.response ? error.response.data : error.message);
+            console.error('Error copying field values:', getErrorMessage(error));
         }
     });
 
@@ -802,7 +834,7 @@ program.command('copy-issue-fields-values-batch')
             
             await copyIssueFieldsValuesBatch(config, issueIdsOrKeys, sourceFields, options.targetField, apiOptions);
         } catch (error) {
-            console.error('Error copying field values batch:', error.response ? error.response.data : error.message);
+            console.error('Error copying field values batch:', getErrorMessage(error));
         }
     });
 
@@ -850,8 +882,120 @@ program.command('undo-field-operation')
             
             await undoFieldOperation(config, apiOptions);
         } catch (error) {
-            console.error('Error undoing field operation:', error.response ? error.response.data : error.message);
+            console.error('Error undoing field operation:', getErrorMessage(error));
         }
     });
+
+// Field configuration scheme commands
+program.command('list-field-configuration-schemes')
+    .description('List field configuration schemes and their project associations')
+    .option('--start-at <startAt>', 'Page offset (default: 0)', '0')
+    .option('--max-results <maxResults>', 'Items per page (default: 50)', '50')
+    .option('-k, --keys <keys>', 'Filter by project ID or key (comma-separated for multiple)')
+    .option('-c, --category <categoryId>', 'Filter by project category ID')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!validateConfig(config)) return;
+        
+        const apiOptions = {};
+        if (options.startAt !== undefined) apiOptions.startAt = parseInt(options.startAt);
+        if (options.maxResults !== undefined) apiOptions.maxResults = parseInt(options.maxResults);
+        if (options.keys) {
+            // Split comma-separated project IDs/keys into an array
+            apiOptions.projectId = options.keys.split(',').map(id => id.trim());
+        }
+        if (options.category) {
+            apiOptions.category = options.category;
+        }
+        
+        try {
+            await listFieldConfigurationSchemes(config, apiOptions);
+        } catch (error) {
+            console.error('Error fetching field configuration schemes:', getErrorMessage(error));
+        }
+    });
+
+program.command('assign-field-configuration-scheme')
+    .description('Assign a field configuration scheme to one or more projects')
+    .option('-k, --keys <keys>', 'Project keys separated by comma (e.g., PROJ1,PROJ2,PROJ3)')
+    .option('-c, --category <categoryId>', 'Category ID (assign to all projects in category)')
+    .option('-s, --scheme-id <schemeId>', 'Field configuration scheme ID (omit to assign default scheme)')
+    .option('--exec', 'Execute assignment (without this option, only preview what would be assigned)')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!validateConfig(config)) return;
+        
+        if (!options.keys && !options.category) {
+            console.error('Must specify either --keys or --category.');
+            return;
+        }
+        
+        if (options.keys && options.category) {
+            console.error('Cannot specify both --keys and --category. Choose one.');
+            return;
+        }
+        
+        const apiOptions = {};
+        if (options.exec) apiOptions.exec = true;
+        
+        try {
+            if (options.category) {
+                await assignFieldConfigurationSchemeToCategory(config, options.category, options.schemeId, apiOptions);
+            } else {
+                const projectKeys = options.keys.split(',').map(key => key.trim());
+                await assignFieldConfigurationScheme(config, projectKeys, options.schemeId, apiOptions);
+            }
+        } catch (error) {
+            console.error('Error assigning field configuration scheme:', getErrorMessage(error));
+        }
+    });
+
+program.command('assign-screen-scheme')
+    .description('Assign a screen scheme to one or more projects')
+    .option('-k, --keys <keys>', 'Project keys separated by comma (e.g., PROJ1,PROJ2,PROJ3)')
+    .option('-c, --category <categoryId>', 'Category ID (assign to all projects in category)')
+    .option('-s, --scheme-id <schemeId>', 'Screen scheme ID (omit to assign default scheme)')
+    .option('--exec', 'Execute assignment (without this option, only preview what would be assigned)')
+    .option('-u, --url <url>', 'Jira instance URL')
+    .option('-e, --email <email>', 'Jira user email')
+    .option('-t, --token <token>', 'Jira API token')
+    .action(async (options) => {
+        const config = { ...loadConfig(), ...options };
+        if (!validateConfig(config)) return;
+        
+        if (!options.keys && !options.category) {
+            console.error('Must specify either --keys or --category.');
+            return;
+        }
+        
+        if (options.keys && options.category) {
+            console.error('Cannot specify both --keys and --category. Choose one.');
+            return;
+        }
+        
+        const apiOptions = {};
+        if (options.exec) apiOptions.exec = true;
+        
+        try {
+            if (options.category) {
+                await assignScreenSchemeToCategory(config, options.category, options.schemeId, apiOptions);
+            } else {
+                const projectKeys = options.keys.split(',').map(key => key.trim());
+                await assignScreenScheme(config, projectKeys, options.schemeId, apiOptions);
+            }
+        } catch (error) {
+            console.error('Error assigning screen scheme:', getErrorMessage(error));
+        }
+    });
+
+
+// Override help information to show categorized commands
+overrideHelpInformation(program);
 
 program.parse();

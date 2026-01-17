@@ -21,6 +21,7 @@ class Loader {
         }
         process.stdout.write('\r\x1B[K'); // Clear line
         process.stdout.write('\x1B[?25h'); // Show cursor
+        process.stdout.write('\n'); // Add line break
     }
 }
 
